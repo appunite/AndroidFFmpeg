@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<array name="video_file_suffixes">
+        <item>.3gp</item>
+        <item>.mp4</item>
+        <item>.avi</item>
+        <item>.mov</item>
+    </array>    
+</resources>

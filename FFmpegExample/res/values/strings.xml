@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="hello">Hello World, FFmpegExampleActivity!</string>
+    <string name="app_name">FFmpegExample</string>
+	<string name="no_videos">No videos</string>
+	<string name="could_not_read_videos_directory">Could not read videos directory</string>
+	<string name="error">Error!</string>
+	<string name="select_item">Select video file</string>
+</resources>
