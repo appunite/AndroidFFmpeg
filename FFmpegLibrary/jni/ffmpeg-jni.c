@@ -178,35 +178,35 @@ void convertToFile(VideoConverter *vc, char *outputFile) {
 						err = VideoConverter_openAudioStream(vc);
 						if (err >= 0) {
 							LOGI(10, "Opened audio stream VideoConverter");
-							printf("Doing the work\n");
+							LOGI(10, "Doing the work");
 							VideoConverter_convertFrames(vc);
-							printf("Done work\n");
+							LOGI(10, "Done work");
 							VideoConverter_closeAudioStream(vc);
 						} else {
-							LOGE(1, "Could not open audio stream\n");
+							LOGE(1, "Could not open audio stream");
 						}
 						VideoConverter_freeAudioStream(vc);
 					} else {
-						LOGE(1, "Could not create audio stream\n");
+						LOGE(1, "Could not create audio stream");
 					}
 					VideoConverter_closeVideoStream(vc);
 				} else {
-					LOGE(1, "Could not open video stream\n");
+					LOGE(1, "Could not open video stream");
 				}
 				VideoConverter_freeVideoStream(vc);
 			} else {
-				LOGE(1, "Could not create video stream\n");
+				LOGE(1, "Could not create video stream");
 			}
 		}
 		if (!hasOutputAudioCodec) {
-			LOGE(1, "File does not have audio codec\n");
+			LOGE(1, "File does not have audio codec");
 		}
 		if (!hasOutputVideoCodec) {
-			LOGE(1, "File does not have video codec\n");
+			LOGE(1, "File does not have video codec");
 		}
 		VideoConverter_closeOutputFile(vc);
 	} else {
-		LOGE(1, "Could not open output file: %s\n", outputFile);
+		LOGE(1, "Could not open output file: %s", outputFile);
 	}
 }
 
@@ -242,17 +242,17 @@ JNIEXPORT jint JNICALL Java_com_appunite_ffmpeg_FFmpeg_naConvert(JNIEnv *pEnv, j
 						VideoConverter_freeFrame(vc);
 						VideoConverter_closeAudioCodec(vc);
 					} else {
-						LOGE(1, "Could not find audio codec\n");
+						LOGE(1, "Could not find audio codec");
 					}
 					VideoConverter_closeVideoCodec(vc);
 				} else {
-					LOGE(1, "Could not find video codec\n");
+					LOGE(1, "Could not find video codec");
 				}
 			} else {
-				LOGE(1, "Could not find audio stream\n");
+				LOGE(1, "Could not find audio stream");
 			}
 		} else {
-			LOGE(1, "Could not find video stream\n");
+			LOGE(1, "Could not find video stream");
 		}
 		VideoConverter_closeFile(vc);
 	} else {

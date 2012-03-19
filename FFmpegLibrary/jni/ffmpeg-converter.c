@@ -15,8 +15,16 @@
 #include <libavcodec/opt.h>
 #include <libavcodec/avfft.h>
 
+#include <android/log.h>
+
 
 #include "ffmpeg-converter.h"
+
+
+#define LOG_LEVEL 10
+#define LOG_TAG "FFmpegTest"
+#define LOGI(level, ...) if (level <= LOG_LEVEL) {__android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__);}
+#define LOGE(level, ...) if (level <= LOG_LEVEL) {__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__);}
 
 #define FALSE 0
 #define TRUE (!(FALSE))
@@ -221,19 +229,19 @@ int VideoConverter_convertFrames(VideoConverter *vc) {
 	av_write_header(vc->outputFormatCtx);
 	AVPacket packet;
 	while (av_read_frame(vc->inputFormatCtx, &packet) >= 0) {
-		printf("Read frame\n");
+		LOGI(10, "Read frame\n");
 		if (packet.stream_index == vc->inputVideoStreamNumber) {
 
 			int frameFinished;
 			int ret = avcodec_decode_video2(vc->inputVideoCodecCtx,
 					vc->inputVideoFrame, &frameFinished, &packet);
 			if (ret < 0) {
-				fprintf(stderr, "Fail decoding video\n");
+				LOGE(1, "Fail decoding video\n");
 				return -1;
 			}
 			if (!frameFinished) {
 				//not frame yet
-				printf("Video frame not finished\n");
+				LOGI(10, "Video frame not finished\n");
 				continue;
 			}
 			printf("Decoded video frame\n");
@@ -242,11 +250,11 @@ int VideoConverter_convertFrames(VideoConverter *vc) {
 					vc->outputVideoBuf, vc->outputVideoBufSize,
 					vc->outputVideoFrame);
 			if (ret < 0) {
-				fprintf(stderr, "Fail encoding video\n");
+				LOGE(1, "Fail encoding video\n");
 				return -2;
 			}
 			if (vc->outputFormatCtx->oformat->flags & AVFMT_RAWPICTURE) {
-				printf("Writing raw video frame\n");
+				LOGI(10, "Writing raw video frame\n");
 				/* raw video case. The API will change slightly in the near
 				 futur for that */
 				AVPacket pkt;
@@ -259,14 +267,14 @@ int VideoConverter_convertFrames(VideoConverter *vc) {
 
 				ret = av_interleaved_write_frame(vc->outputFormatCtx, &pkt);
 			} else {
-				printf("Encoding video frame\n");
+				LOGI(10, "Encoding video frame\n");
 				/* encode the image */
 				int out_size = avcodec_encode_video(vc->outputVideoCodecCtx,
 						vc->outputVideoBuf, vc->outputVideoBufSize,
 						vc->inputVideoFrame);
 				/* if zero size, it means the image was buffered */
 				if (out_size > 0) {
-					printf("Writing video frame\n");
+					LOGI(10, "Writing video frame\n");
 					AVPacket pkt;
 					av_init_packet(&pkt);
 
@@ -288,18 +296,18 @@ int VideoConverter_convertFrames(VideoConverter *vc) {
 					/* write the compressed frame in the media file */
 					ret = av_interleaved_write_frame(vc->outputFormatCtx, &pkt);
 					if (ret < 0) {
-						fprintf(stderr, "Error while writing video frame\n");
+						LOGE(1, "Error while writing video frame\n");
 						return -5;
 					}
-					printf("Wrote encoded video frame\n");
+					LOGI(10, "Wrote encoded video frame\n");
 				} else if (out_size < 0) {
-					fprintf(stderr, "Error while encoding video\n");
+					LOGE(1, "Error while encoding video\n");
 					return -4;
 				} else {
-					printf("Video frame buffered\n");
+					LOGI(10, "Video frame buffered\n");
 				}
 			}
-			printf("Encoded video frame\n");
+			LOGI(10, "Encoded video frame\n");
 
 		} else if (packet.stream_index == vc->inputAudioStreamNumber) {
 			if (samples_size
@@ -313,19 +321,19 @@ int VideoConverter_convertFrames(VideoConverter *vc) {
 			int ret = avcodec_decode_audio3(vc->inputAudioCodecCtx, samples,
 					&decoded_data_size, &packet);
 			if (ret < 0) {
-				fprintf(stderr, "Fail decoding audio\n");
+				LOGE(1, "Fail decoding audio\n");
 				return -3;
 			}
-			printf("Decoded audio frame\n");
+			LOGI(10, "Decoded audio frame\n");
 
 			int out_size = avcodec_encode_audio(vc->outputAudioCodecCtx,
 					vc->outputAudioBuf, vc->outputAudioBufSize, samples);
 			if (out_size < 0) {
-				fprintf(stderr, "Error while encoding audio\n");
+				LOGE(1, "Error while encoding audio\n");
 				return -5;
 			}
 			if (out_size > 0) {
-				printf("Writing audio frame\n");
+				LOGI(10, "Writing audio frame\n");
 				AVPacket pkt;
 				av_init_packet(&pkt);
 
@@ -343,10 +351,10 @@ int VideoConverter_convertFrames(VideoConverter *vc) {
 				/* write the compressed frame in the media file */
 				ret = av_interleaved_write_frame(vc->outputFormatCtx, &pkt);
 				if (ret < 0) {
-					fprintf(stderr, "Error while writing audio frame\n");
+					LOGE(1, "Error while writing audio frame\n");
 					return -5;
 				}
-				printf("Wrote encoded audio frame\n");
+				LOGI(10, "Wrote encoded audio frame\n");
 			}
 		}
 	}
@@ -416,7 +424,7 @@ int VideoConverter_openOutputFile(VideoConverter *vc, char * fileName) {
 	if (!(vc->outputFmt->flags & AVFMT_NOFILE)) {
 		if (avio_open(&vc->outputFormatCtx->pb, fileName, AVIO_FLAG_WRITE) < 0) { /* AVIO_FLAG_WRITE */
 			fprintf(stderr, "Could not open '%s'\n", fileName);
-			return 1;
+			return -2;
 		}
 	}
 

@@ -64,6 +64,13 @@ function build_one
 	    --disable-everything \
 	    --enable-demuxer=mov \
 	    --enable-demuxer=h264 \
+	    --enable-demuxer=mpegvideo \
+	    --enable-demuxer=h263 \
+	    --enable-demuxer=mpegps \
+	    --enable-demuxer=mjpeg \
+	    --enable-muxer=mp4 \
+	    --enable-muxer=mov \
+	    --enable-muxer=mjpeg \
 	    --disable-ffplay \
 	    --enable-protocol=file \
 	    --enable-avformat \
@@ -116,7 +123,8 @@ PREFIX=../ffmpeg-build/x86
 ADDITIONAL_CONFIGURE_FLAG=--disable-asm
 PREBUILT=$NDK/toolchains/x86-4.4.3/prebuilt/$OS-x86
 PLATFORM_VERSION=android-9
-#build_one
+build_aac
+build_one
 
 #arm v7vfpv3
 EABIARCH=arm-linux-androideabi
@@ -127,7 +135,8 @@ PREFIX=../ffmpeg-build/armeabi-v7a
 ADDITIONAL_CONFIGURE_FLAG=
 PREBUILT=$NDK/toolchains/arm-linux-androideabi-4.4.3/prebuilt/$OS-x86
 PLATFORM_VERSION=android-5
-#build_one
+build_aac
+build_one
 
 
 

@@ -1,6 +1,7 @@
 package com.appunite.ffmpeg.example;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,11 +37,20 @@ public class FFmpegExampleActivity extends FragmentActivity implements
 		protected String doInBackground(String... params) {
 			String inputFileName = params[0];
 
-			String outputFileName;
+			String outputFileName = inputFileName.substring(0,
+					inputFileName.lastIndexOf('.'));
+
 			if (inputFileName.endsWith(".mov")) {
-				outputFileName = inputFileName + ".mpeg";
+				outputFileName = outputFileName + ".mp4";
 			} else {
-				outputFileName = inputFileName + ".mov";
+				outputFileName = outputFileName + ".mov";
+			}
+			File file = new File(outputFileName);
+			try {
+				file.createNewFile();
+			} catch (IOException e) {
+				e.printStackTrace();
+				return null;
 			}
 			int error = FFmpeg.naConvert(inputFileName, outputFileName);
 			if (error < 0) {
