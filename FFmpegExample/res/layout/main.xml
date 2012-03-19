@@ -3,21 +3,29 @@
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     android:baselineAligned="true"
-	android:orientation="vertical">
+    android:orientation="vertical" >
 
     <TextView
         android:id="@android:id/text1"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:maxLines="9"
         android:background="#ff00004c"
-        android:padding="10dp"
         android:gravity="center"
+        android:maxLines="9"
+        android:padding="10dp"
         android:text="@string/select_item" />
+
+    <Button
+        android:id="@+id/convert_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="right"
+        android:paddingRight="10dp" 
+        android:text="@string/convert"/>
 
     <RelativeLayout
         android:layout_width="fill_parent"
-        android:layout_height="fill_parent">
+        android:layout_height="fill_parent" >
 
         <ListView
             android:id="@android:id/list"

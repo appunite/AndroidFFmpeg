@@ -14,6 +14,9 @@ git submodule init
 git submodule update
 cd FFmpegLibrary
 cd jni
+cd vo-aacenc
+autoreconf
+cd ..
 export NDK=/your/path/to/android-ndk
 ./build_android.sh
 make sure that files FFmpegLibrary/libs/{armeabi,armeabi-v7a,x86}/libffmpeg.so was created, otherwise you are in truble

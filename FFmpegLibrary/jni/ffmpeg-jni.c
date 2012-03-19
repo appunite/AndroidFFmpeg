@@ -161,46 +161,52 @@ void convertToFile(VideoConverter *vc, char *outputFile) {
 	int err;
 	err = VideoConverter_openOutputFile(vc, outputFile);
 	if (err >= 0) {
+		LOGI(10, "Opened output file VideoConverter");
 		int hasOutputVideoCodec = VideoConverter_hasOutputVideoCodec(vc);
 		int hasOutputAudioCodec = VideoConverter_hasOutputAudioCodec(vc);
 		if (hasOutputAudioCodec && hasOutputVideoCodec) {
+			LOGI(10, "Has codecs VideoConverter");
 			err = VideoConverter_createVideoStream(vc);
 			if (err >= 0) {
+				LOGI(10, "Created video stream VideoConverter");
 				err = VideoConverter_openVideoStream(vc);
 				if (err >= 0) {
+					LOGI(10, "Opened video stream VideoConverter");
 					err = VideoConverter_createAudioStream(vc);
 					if (err >= 0) {
+						LOGI(10, "Created audio stream VideoConverter");
 						err = VideoConverter_openAudioStream(vc);
 						if (err >= 0) {
+							LOGI(10, "Opened audio stream VideoConverter");
 							printf("Doing the work\n");
 							VideoConverter_convertFrames(vc);
 							printf("Done work\n");
 							VideoConverter_closeAudioStream(vc);
 						} else {
-							fprintf(stderr, "Could not open audio stream\n");
+							LOGE(1, "Could not open audio stream\n");
 						}
 						VideoConverter_freeAudioStream(vc);
 					} else {
-						fprintf(stderr, "Could not create audio stream\n");
+						LOGE(1, "Could not create audio stream\n");
 					}
 					VideoConverter_closeVideoStream(vc);
 				} else {
-					fprintf(stderr, "Could not open video stream\n");
+					LOGE(1, "Could not open video stream\n");
 				}
 				VideoConverter_freeVideoStream(vc);
 			} else {
-				fprintf(stderr, "Could not create video stream\n");
+				LOGE(1, "Could not create video stream\n");
 			}
 		}
 		if (!hasOutputAudioCodec) {
-			fprintf(stderr, "File does not have audio codec\n");
+			LOGE(1, "File does not have audio codec\n");
 		}
 		if (!hasOutputVideoCodec) {
-			fprintf(stderr, "File does not have video codec\n");
+			LOGE(1, "File does not have video codec\n");
 		}
 		VideoConverter_closeOutputFile(vc);
 	} else {
-		fprintf(stderr, "Could not open output file: %s\n", outputFile);
+		LOGE(1, "Could not open output file: %s\n", outputFile);
 	}
 }
 
@@ -211,17 +217,23 @@ JNIEXPORT jint JNICALL Java_com_appunite_ffmpeg_FFmpeg_naConvert(JNIEnv *pEnv, j
 	int err;
 	VideoConverter *vc = VideoConverter_init();
 	VideoConverter_register(vc);
+	LOGI(10, "Initialized VideoConverter");
 	err = VideoConverter_openFile(vc, inputFile);
 	if (err >= 0) {
+		LOGI(10, "Opened VideoConverter");
 		VideoConverter_dumpFormat(vc);
 		err = VideoConverter_findVideoStream(vc);
 		if (err >= 0) {
+			LOGI(10, "Found video stream VideoConverter");
 			err = VideoConverter_findAudioStream(vc);
 			if (err >= 0) {
+				LOGI(10, "Found audio stream VideoConverter");
 				err = VideoConverter_findVideoCodec(vc);
 				if (err >= 0) {
+					LOGI(10, "Found video codec VideoConverter");
 					err = VideoConverter_findAudioCodec(vc);
 					if (err >= 0) {
+						LOGI(10, "Found audio codec VideoConverter");
 						VideoConverter_createFrame(vc);
 
 						convertToFile(vc, outputFile);
@@ -230,21 +242,21 @@ JNIEXPORT jint JNICALL Java_com_appunite_ffmpeg_FFmpeg_naConvert(JNIEnv *pEnv, j
 						VideoConverter_freeFrame(vc);
 						VideoConverter_closeAudioCodec(vc);
 					} else {
-						fprintf(stderr, "Could not find audio codec\n");
+						LOGE(1, "Could not find audio codec\n");
 					}
 					VideoConverter_closeVideoCodec(vc);
 				} else {
-					fprintf(stderr, "Could not find video codec\n");
+					LOGE(1, "Could not find video codec\n");
 				}
 			} else {
-				fprintf(stderr, "Could not find audio stream\n");
+				LOGE(1, "Could not find audio stream\n");
 			}
 		} else {
-			fprintf(stderr, "Could not find video stream\n");
+			LOGE(1, "Could not find video stream\n");
 		}
 		VideoConverter_closeFile(vc);
 	} else {
-		fprintf(stderr, "Could not open video file");
+		LOGE(1, "Could not open video file");
 	}
 	VideoConverter_free(vc);
 	return 0;

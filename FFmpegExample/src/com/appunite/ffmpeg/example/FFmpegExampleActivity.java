@@ -8,6 +8,7 @@ import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.LoaderManager.LoaderCallbacks;
@@ -15,10 +16,12 @@ import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.Loader;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -27,6 +30,54 @@ import com.appunite.ffmpeg.FFmpeg;
 
 public class FFmpegExampleActivity extends FragmentActivity implements
 		LoaderCallbacks<List<File>> {
+	private class ConvertAsyncTask extends AsyncTask<String, Void, String> {
+
+		@Override
+		protected String doInBackground(String... params) {
+			String inputFileName = params[0];
+
+			String outputFileName;
+			if (inputFileName.endsWith(".mov")) {
+				outputFileName = inputFileName + ".mpeg";
+			} else {
+				outputFileName = inputFileName + ".mov";
+			}
+			int error = FFmpeg.naConvert(inputFileName, outputFileName);
+			if (error < 0) {
+				return null;
+			}
+			return outputFileName;
+		}
+
+		@Override
+		protected void onPostExecute(String result) {
+			FFmpegExampleActivity.this.mConvertButton.setEnabled(true);
+			if (result == null) {
+				Builder builder = new AlertDialog.Builder(
+						FFmpegExampleActivity.this);
+				builder.setMessage(R.string.could_convert_video);
+				builder.setIcon(android.R.drawable.ic_dialog_alert);
+				builder.setTitle(R.string.error);
+				builder.setPositiveButton(android.R.string.ok,
+						new DialogInterface.OnClickListener() {
+
+							@Override
+							public void onClick(DialogInterface dialog,
+									int which) {
+								dialog.cancel();
+							}
+						});
+				AlertDialog alertDialog = builder.create();
+				alertDialog.show();
+				return;
+			}
+
+			FFmpegExampleActivity.this.getSupportLoaderManager().restartLoader(
+					0x00, null, FFmpegExampleActivity.this);
+		}
+
+	}
+
 	private static class LoadVideoFilesTaskLoader extends
 			AsyncTaskLoader<List<File>> {
 		private final String[] mVideoFileSuffixes;
@@ -42,6 +93,8 @@ public class FFmpegExampleActivity extends FragmentActivity implements
 		private void getVideosFromDirectory(File directory,
 				List<File> videoFiles) {
 			File[] listFiles = directory.listFiles();
+			if (listFiles == null)
+				return;
 			for (File file : listFiles) {
 				if (file.isDirectory()) {
 					this.getVideosFromDirectory(file, videoFiles);
@@ -134,12 +187,24 @@ public class FFmpegExampleActivity extends FragmentActivity implements
 	}
 
 	private ListView mListView;
+
 	private ProgressBar mProgressBar;
 
 	private View mEmptyView;
-
 	private VideosAdapter mAdapter;
 	private TextView mFileDescTextView;
+	private Button mConvertButton;
+
+	private File mSelectedMovie = null;
+
+	protected void convertButtonClicked() {
+		String inputFileName = this.mSelectedMovie.getAbsolutePath();
+
+		ConvertAsyncTask asyncTask = new ConvertAsyncTask();
+		asyncTask.execute(inputFileName);
+
+		this.mConvertButton.setEnabled(false);
+	}
 
 	protected void movieSelected(File item) {
 		// could take some while and should be done in background
@@ -160,10 +225,14 @@ public class FFmpegExampleActivity extends FragmentActivity implements
 			displayText = "error: " + error;
 		}
 		this.mFileDescTextView.setText(displayText);
+		this.mConvertButton.setVisibility(View.VISIBLE);
+		this.mSelectedMovie = item;
 	}
 
 	protected void nothingSelected() {
 		this.mFileDescTextView.setText(R.string.select_item);
+		this.mConvertButton.setVisibility(View.GONE);
+		this.mSelectedMovie = null;
 	}
 
 	@Override
@@ -189,6 +258,14 @@ public class FFmpegExampleActivity extends FragmentActivity implements
 				FFmpegExampleActivity.this.movieSelected(item);
 			}
 		});
+		this.mConvertButton = (Button) this.findViewById(R.id.convert_button);
+		this.mConvertButton.setOnClickListener(new OnClickListener() {
+
+			@Override
+			public void onClick(View v) {
+				FFmpegExampleActivity.this.convertButtonClicked();
+			}
+		});
 		this.getSupportLoaderManager().restartLoader(0x00, null, this);
 	}
 
@@ -207,6 +284,7 @@ public class FFmpegExampleActivity extends FragmentActivity implements
 		this.mProgressBar.setVisibility(View.VISIBLE);
 		this.mListView.setVisibility(View.GONE);
 		this.mEmptyView.setVisibility(View.GONE);
+		this.mConvertButton.setVisibility(View.GONE);
 		this.nothingSelected();
 	}
 
