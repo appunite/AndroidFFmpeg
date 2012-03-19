@@ -3,10 +3,13 @@ package com.appunite.ffmpeg;
 public class FFmpeg {
 	static {
 		System.loadLibrary("ffmpeg");
-		System.loadLibrary("ffmpeg-test-jni");
+		System.loadLibrary("ffmpeg-jni");
 	}
 
 	public static native void naClose();
+
+	public static native int naConvert(String inputFileName,
+			String outputFileName);
 
 	public static native String naGetVideoCodecName();
 
@@ -15,5 +18,4 @@ public class FFmpeg {
 	public static native int[] naGetVideoResolution();
 
 	public static native int naInit(String _videoFileName);
-
 }

@@ -28,6 +28,8 @@ from: http://www.roman10.net/how-to-port-ffmpeg-the-program-to-androidideas-and-
 #include <libavcodec/opt.h>
 #include <libavcodec/avfft.h>
 
+#include "ffmpeg-converter.h"
+
 /*for android logs*/
 #define LOG_TAG "FFmpegTest"
 #define LOG_LEVEL 10
@@ -122,7 +124,7 @@ JNIEXPORT jint JNICALL Java_com_appunite_ffmpeg_FFmpeg_naInit(JNIEnv *pEnv, jobj
     gFileName = (char *)(*pEnv)->GetStringUTFChars(pEnv, pFileName, NULL);
     if (gFileName == NULL) {
         LOGE(1, "Error: cannot get the video file name!");
-        return;
+        return -1;
     } 
     LOGI(10, "video file name is %s", gFileName);
     int code = get_video_info(gFileName);
@@ -155,6 +157,97 @@ JNIEXPORT jintArray JNICALL Java_com_appunite_ffmpeg_FFmpeg_naGetVideoResolution
     return lRes;
 }
 
+void convertToFile(VideoConverter *vc, char *outputFile) {
+	int err;
+	err = VideoConverter_openOutputFile(vc, outputFile);
+	if (err >= 0) {
+		int hasOutputVideoCodec = VideoConverter_hasOutputVideoCodec(vc);
+		int hasOutputAudioCodec = VideoConverter_hasOutputAudioCodec(vc);
+		if (hasOutputAudioCodec && hasOutputVideoCodec) {
+			err = VideoConverter_createVideoStream(vc);
+			if (err >= 0) {
+				err = VideoConverter_openVideoStream(vc);
+				if (err >= 0) {
+					err = VideoConverter_createAudioStream(vc);
+					if (err >= 0) {
+						err = VideoConverter_openAudioStream(vc);
+						if (err >= 0) {
+							printf("Doing the work\n");
+							VideoConverter_convertFrames(vc);
+							printf("Done work\n");
+							VideoConverter_closeAudioStream(vc);
+						} else {
+							fprintf(stderr, "Could not open audio stream\n");
+						}
+						VideoConverter_freeAudioStream(vc);
+					} else {
+						fprintf(stderr, "Could not create audio stream\n");
+					}
+					VideoConverter_closeVideoStream(vc);
+				} else {
+					fprintf(stderr, "Could not open video stream\n");
+				}
+				VideoConverter_freeVideoStream(vc);
+			} else {
+				fprintf(stderr, "Could not create video stream\n");
+			}
+		}
+		if (!hasOutputAudioCodec) {
+			fprintf(stderr, "File does not have audio codec\n");
+		}
+		if (!hasOutputVideoCodec) {
+			fprintf(stderr, "File does not have video codec\n");
+		}
+		VideoConverter_closeOutputFile(vc);
+	} else {
+		fprintf(stderr, "Could not open output file: %s\n", outputFile);
+	}
+}
 
+JNIEXPORT jint JNICALL Java_com_appunite_ffmpeg_FFmpeg_naConvert(JNIEnv *pEnv, jobject pObj, jstring jInputFile, jstring jOutputFile) {
+	char *inputFile = (char *)(*pEnv)->GetStringUTFChars(pEnv, jInputFile, NULL);
+	char *outputFile = (char *)(*pEnv)->GetStringUTFChars(pEnv, jOutputFile, NULL);
+
+	int err;
+	VideoConverter *vc = VideoConverter_init();
+	VideoConverter_register(vc);
+	err = VideoConverter_openFile(vc, inputFile);
+	if (err >= 0) {
+		VideoConverter_dumpFormat(vc);
+		err = VideoConverter_findVideoStream(vc);
+		if (err >= 0) {
+			err = VideoConverter_findAudioStream(vc);
+			if (err >= 0) {
+				err = VideoConverter_findVideoCodec(vc);
+				if (err >= 0) {
+					err = VideoConverter_findAudioCodec(vc);
+					if (err >= 0) {
+						VideoConverter_createFrame(vc);
+
+						convertToFile(vc, outputFile);
+						//VideoConverter_readFrames(vc); // work
+
+						VideoConverter_freeFrame(vc);
+						VideoConverter_closeAudioCodec(vc);
+					} else {
+						fprintf(stderr, "Could not find audio codec\n");
+					}
+					VideoConverter_closeVideoCodec(vc);
+				} else {
+					fprintf(stderr, "Could not find video codec\n");
+				}
+			} else {
+				fprintf(stderr, "Could not find audio stream\n");
+			}
+		} else {
+			fprintf(stderr, "Could not find video stream\n");
+		}
+		VideoConverter_closeFile(vc);
+	} else {
+		fprintf(stderr, "Could not open video file");
+	}
+	VideoConverter_free(vc);
+	return 0;
+}
 
 
