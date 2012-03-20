@@ -10,6 +10,7 @@
 
 typedef struct VideoConverter VideoConverter;
 
+
 void VideoConverter_free(VideoConverter * vc);
 VideoConverter * VideoConverter_init();
 void VideoConverter_register(VideoConverter *vc);
@@ -20,6 +21,8 @@ int VideoConverter_findVideoStream(VideoConverter *vc);
 int VideoConverter_findAudioStream(VideoConverter *vc);
 int VideoConverter_findVideoCodec(VideoConverter *vc);
 int VideoConverter_findAudioCodec(VideoConverter *vc);
+void VideoConverter_printCodecDescription(AVCodec *codec);
+void VideoConverter_printAllCodecs();
 void VideoConverter_closeAudioCodec(VideoConverter *vc);
 void VideoConverter_closeVideoCodec(VideoConverter *vc);
 void VideoConverter_createFrame(VideoConverter *vc);

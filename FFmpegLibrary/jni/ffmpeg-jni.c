@@ -199,9 +199,11 @@ void convertToFile(VideoConverter *vc, char *outputFile) {
 			}
 		}
 		if (!hasOutputAudioCodec) {
+			VideoConverter_printAllCodecs();
 			LOGE(1, "File does not have audio codec");
 		}
 		if (!hasOutputVideoCodec) {
+			VideoConverter_printAllCodecs();
 			LOGE(1, "File does not have video codec");
 		}
 		VideoConverter_closeOutputFile(vc);
@@ -218,6 +220,7 @@ JNIEXPORT jint JNICALL Java_com_appunite_ffmpeg_FFmpeg_naConvert(JNIEnv *pEnv, j
 	VideoConverter *vc = VideoConverter_init();
 	VideoConverter_register(vc);
 	LOGI(10, "Initialized VideoConverter");
+	VideoConverter_printAllCodecs();
 	err = VideoConverter_openFile(vc, inputFile);
 	if (err >= 0) {
 		LOGI(10, "Opened VideoConverter");

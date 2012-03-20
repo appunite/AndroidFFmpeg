@@ -17,9 +17,7 @@
 
 #include <android/log.h>
 
-
 #include "ffmpeg-converter.h"
-
 
 #define LOG_LEVEL 10
 #define LOG_TAG "FFmpegTest"
@@ -180,23 +178,70 @@ int VideoConverter_findAudioStream(VideoConverter *vc) {
 int VideoConverter_findVideoCodec(VideoConverter *vc) {
 	AVCodec *codec = avcodec_find_decoder(vc->inputVideoCodecCtx->codec_id);
 	if (codec == NULL) {
+		LOGE(1,
+				"Could not find video codec for id: %d", vc->inputVideoCodecCtx->codec_id);
+		VideoConverter_printAllCodecs();
 		return -1;
 	}
 	if (avcodec_open(vc->inputVideoCodecCtx, codec) < 0) {
-		fprintf(stderr, "Could not open video codec\n");
+		LOGE(1, "Could not open video codec");
+		VideoConverter_printCodecDescription(codec);
 		return -2;
 	}
 	vc->inputVideoCodec = codec;
 	return 0;
 }
 
+void VideoConverter_printCodecDescription(AVCodec *codec) {
+	char *type = "???";
+	switch (codec->type) {
+	case AVMEDIA_TYPE_ATTACHMENT:
+		type = "attachment";
+		break;
+
+	case AVMEDIA_TYPE_AUDIO:
+		type = "audio";
+		break;
+	case AVMEDIA_TYPE_DATA:
+		type = "data";
+		break;
+	case AVMEDIA_TYPE_NB:
+		type = "nb";
+		break;
+	case AVMEDIA_TYPE_SUBTITLE:
+		type = "subtitle";
+		break;
+	case AVMEDIA_TYPE_UNKNOWN:
+		type = "unknown";
+		break;
+	case AVMEDIA_TYPE_VIDEO:
+		type = "video";
+		break;
+	default:
+		break;
+	}
+	LOGI(10, "id: %d codec: %s, type: %s", codec->id, codec->name, type);
+}
+
+void VideoConverter_printAllCodecs() {
+	AVCodec *p = NULL;
+	LOGI(10, "available codecs:");
+	while ((p = av_codec_next(p)) != NULL) {
+		VideoConverter_printCodecDescription(p);
+	}
+}
+
 int VideoConverter_findAudioCodec(VideoConverter *vc) {
 	AVCodec *codec = avcodec_find_decoder(vc->inputAudioCodecCtx->codec_id);
 	if (codec == NULL) {
+		LOGE(1,
+				"Could not find audio codec for id: %d", vc->inputAudioCodecCtx->codec_id);
+		VideoConverter_printAllCodecs();
 		return -1;
 	}
 	if (avcodec_open(vc->inputAudioCodecCtx, codec) < 0) {
-		fprintf(stderr, "Could not open audio codec\n");
+		LOGE(1, "Could not open audio codec");
+		VideoConverter_printCodecDescription(codec);
 		return -2;
 	}
 	vc->inputAudioCodec = codec;
@@ -278,14 +323,9 @@ int VideoConverter_convertFrames(VideoConverter *vc) {
 					AVPacket pkt;
 					av_init_packet(&pkt);
 
-					pkt.pts = AV_NOPTS_VALUE;
-					if (vc->outputVideoCodecCtx->coded_frame
-							&& vc->outputVideoCodecCtx->coded_frame->pts
-									!= AV_NOPTS_VALUE) {
-						pkt.pts = av_rescale_q(packet.pts,
-								vc->inputVideoStream->time_base,
-								vc->outputVideoStream->time_base);
-					}
+					pkt.pts = av_rescale_q(packet.pts,
+							vc->inputVideoStream->time_base,
+							vc->outputVideoStream->time_base);
 					if (vc->outputVideoCodecCtx->coded_frame->key_frame)
 						pkt.flags |= AV_PKT_FLAG_KEY;
 					pkt.stream_index = vc->outputVideoStream->index;
@@ -296,13 +336,13 @@ int VideoConverter_convertFrames(VideoConverter *vc) {
 					/* write the compressed frame in the media file */
 					ret = av_interleaved_write_frame(vc->outputFormatCtx, &pkt);
 					if (ret < 0) {
-						LOGE(1, "Error while writing video frame\n");
-						return -5;
+						LOGE(1, "Error while writing video frame: %d", ret);
+						continue;
 					}
 					LOGI(10, "Wrote encoded video frame\n");
 				} else if (out_size < 0) {
 					LOGE(1, "Error while encoding video\n");
-					return -4;
+					continue;
 				} else {
 					LOGI(10, "Video frame buffered\n");
 				}
@@ -310,52 +350,52 @@ int VideoConverter_convertFrames(VideoConverter *vc) {
 			LOGI(10, "Encoded video frame\n");
 
 		} else if (packet.stream_index == vc->inputAudioStreamNumber) {
-			if (samples_size
-					< FFMAX(packet.size*sizeof(*samples), AVCODEC_MAX_AUDIO_FRAME_SIZE)) {
-				samples_size =
-						FFMAX(packet.size*sizeof(*samples), AVCODEC_MAX_AUDIO_FRAME_SIZE);
-				av_free(samples);
-				samples = av_malloc(samples_size);
-			}
-			unsigned int decoded_data_size = samples_size;
-			int ret = avcodec_decode_audio3(vc->inputAudioCodecCtx, samples,
-					&decoded_data_size, &packet);
-			if (ret < 0) {
-				LOGE(1, "Fail decoding audio\n");
-				return -3;
-			}
-			LOGI(10, "Decoded audio frame\n");
-
-			int out_size = avcodec_encode_audio(vc->outputAudioCodecCtx,
-					vc->outputAudioBuf, vc->outputAudioBufSize, samples);
-			if (out_size < 0) {
-				LOGE(1, "Error while encoding audio\n");
-				return -5;
-			}
-			if (out_size > 0) {
-				LOGI(10, "Writing audio frame\n");
-				AVPacket pkt;
-				av_init_packet(&pkt);
-
-				pkt.pts = av_rescale_q(packet.pts,
-						vc->inputAudioStream->time_base,
-						vc->outputAudioStream->time_base);
-
-				if (vc->outputAudioCodecCtx->coded_frame->key_frame)
-					pkt.flags |= AV_PKT_FLAG_KEY;
-				pkt.stream_index = vc->outputAudioStream->index;
-				pkt.data = vc->outputAudioBuf;
-				pkt.size = out_size;
-				pkt.dts = AV_NOPTS_VALUE;
-
-				/* write the compressed frame in the media file */
-				ret = av_interleaved_write_frame(vc->outputFormatCtx, &pkt);
-				if (ret < 0) {
-					LOGE(1, "Error while writing audio frame\n");
-					return -5;
-				}
-				LOGI(10, "Wrote encoded audio frame\n");
-			}
+//			if (samples_size
+//					< FFMAX(packet.size*sizeof(*samples), AVCODEC_MAX_AUDIO_FRAME_SIZE)) {
+//				samples_size =
+//						FFMAX(packet.size*sizeof(*samples), AVCODEC_MAX_AUDIO_FRAME_SIZE);
+//				av_free(samples);
+//				samples = av_malloc(samples_size);
+//			}
+//			unsigned int decoded_data_size = samples_size;
+//			int ret = avcodec_decode_audio3(vc->inputAudioCodecCtx, samples,
+//					&decoded_data_size, &packet);
+//			if (ret < 0) {
+//				LOGE(1, "Fail decoding audio frame");
+//				continue;
+//			}
+//			LOGI(10, "Decoded audio frame");
+//
+//			int out_size = avcodec_encode_audio(vc->outputAudioCodecCtx,
+//					vc->outputAudioBuf, vc->outputAudioBufSize, samples);
+//			if (out_size < 0) {
+//				LOGE(1, "Error while encoding audio");
+//				continue;
+//			}
+//			if (out_size > 0) {
+//				LOGI(10, "Writing audio frame\n");
+//				AVPacket pkt;
+//				av_init_packet(&pkt);
+//
+//				pkt.pts = av_rescale_q(packet.pts,
+//						vc->inputAudioStream->time_base,
+//						vc->outputAudioStream->time_base);
+//
+//				if (vc->outputAudioCodecCtx->coded_frame->key_frame)
+//					pkt.flags |= AV_PKT_FLAG_KEY;
+//				pkt.stream_index = vc->outputAudioStream->index;
+//				pkt.data = vc->outputAudioBuf;
+//				pkt.size = out_size;
+//				pkt.dts = AV_NOPTS_VALUE;
+//
+//				/* write the compressed frame in the media file */
+//				ret = av_interleaved_write_frame(vc->outputFormatCtx, &pkt);
+//				if (ret < 0) {
+//					LOGE(1, "Error while writing audio frame\n");
+//					continue;
+//				}
+//				LOGI(10, "Wrote encoded audio frame\n");
+//			}
 		}
 	}
 	av_write_trailer(vc->outputFormatCtx);
@@ -422,7 +462,8 @@ int VideoConverter_openOutputFile(VideoConverter *vc, char * fileName) {
 	vc->outputFmt = vc->outputFormatCtx->oformat;
 	/* open the output file, if needed */
 	if (!(vc->outputFmt->flags & AVFMT_NOFILE)) {
-		if (avio_open(&vc->outputFormatCtx->pb, fileName, AVIO_FLAG_WRITE) < 0) { /* AVIO_FLAG_WRITE */
+		if (avio_open(&vc->outputFormatCtx->pb, fileName, AVIO_FLAG_WRITE)
+				< 0) { /* AVIO_FLAG_WRITE */
 			fprintf(stderr, "Could not open '%s'\n", fileName);
 			return -2;
 		}
@@ -462,6 +503,7 @@ int VideoConverter_createVideoStream(VideoConverter *vc) {
 		fprintf(stderr, "Could not alloc stream\n");
 		return -1;
 	}
+	LOGI(10, "Selected codec for video output stream");
 	AVCodecContext *c = vc->outputVideoStream->codec;
 	AVCodecContext *iC = vc->inputVideoCodecCtx;
 	vc->outputVideoCodecCtx = c;
@@ -521,7 +563,6 @@ int VideoConverter_allocPicture(VideoConverter *vc) {
 }
 
 int VideoConverter_openVideoStream(VideoConverter *vc) {
-	AVCodec *codec = vc->outputVideoCodec;
 	AVCodecContext *c = vc->outputVideoCodecCtx;
 
 	vc->outputVideoCodecCtx = vc->outputVideoStream->codec;
@@ -530,13 +571,15 @@ int VideoConverter_openVideoStream(VideoConverter *vc) {
 	vc->outputVideoCodec = avcodec_find_encoder(
 			vc->outputVideoCodecCtx->codec_id);
 	if (!vc->outputVideoCodec) {
-		fprintf(stderr, "Video codec not found\n");
+		LOGE(1, "Video codec not found");
+		VideoConverter_printAllCodecs();
 		return -1;
 	}
-
+	LOGI(10, "Found video output codec:");
+	VideoConverter_printCodecDescription(vc->outputVideoCodec);
 	/* open the codec */
 	if (avcodec_open(vc->outputVideoCodecCtx, vc->outputVideoCodec) < 0) {
-		fprintf(stderr, "Could not open video codec\n");
+		LOGE(1, "Could not open video codec\n");
 		return -2;
 	}
 
@@ -605,13 +648,16 @@ int VideoConverter_openAudioStream(VideoConverter *vc) {
 	vc->outputAudioCodec = avcodec_find_encoder(
 			vc->outputAudioCodecCtx->codec_id);
 	if (!vc->outputAudioCodec) {
-		fprintf(stderr, "audio codec not found\n");
+		LOGE(1, "audio output codec not found");
+		VideoConverter_printAllCodecs();
 		return -1;
 	}
+	LOGI(10, "found audio output codec:");
+	VideoConverter_printCodecDescription(vc->outputAudioCodec);
 
 	/* open it */
 	if (avcodec_open(vc->outputAudioCodecCtx, vc->outputAudioCodec) < 0) {
-		fprintf(stderr, "could not open audio codec\n");
+		LOGE(1, "could not open audio codec\n");
 		return -2;
 	}
 
