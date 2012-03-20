@@ -87,6 +87,9 @@ function build_one
 	    --enable-decoder=aac \
 	    --enable-encoder=aac \
 	    --enable-parser=h264 \
+	    --enable-encoder=mp2 \
+	    --enable-decoder=mp2 \
+	    --enable-muxer=mp2 \
 	    --disable-network \
 	    --enable-zlib \
 	    --disable-avfilter \
