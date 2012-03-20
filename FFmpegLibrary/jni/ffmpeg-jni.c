@@ -36,62 +36,44 @@ from: http://www.roman10.net/how-to-port-ffmpeg-the-program-to-androidideas-and-
 #define LOGI(level, ...) if (level <= LOG_LEVEL) {__android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__);}
 #define LOGE(level, ...) if (level <= LOG_LEVEL) {__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__);}
 
-/**/
-char *gFileName;	  //the file name of the video
-
-AVFormatContext *gFormatCtx;
+AVFormatContext *gFormatCtx = NULL;
 int gVideoStreamIndex;    //video stream index
 
-AVCodecContext *gVideoCodecCtx;
-
-static int get_video_info(char *prFilename);
+AVCodecContext *gVideoCodecCtx = NULL;
 
 /*parsing the video file, done by parse thread*/
-static int get_video_info(char *prFilename) {
+static int get_video_info(char *gFilename) {
+
+    LOGI(10, "getting video info from file: %s", gFilename);
+
     AVCodec *lVideoCodec;
     int lError;
     /*some global variables initialization*/
     LOGI(10, "get video info starts!");
     /*register the codec*/
-    extern AVCodec ff_h263_decoder;
-    avcodec_register(&ff_h263_decoder);
-    extern AVCodec ff_h264_decoder;
-    avcodec_register(&ff_h264_decoder);
-    extern AVCodec ff_mpeg4_decoder;
-    avcodec_register(&ff_mpeg4_decoder);
-    extern AVCodec ff_mjpeg_decoder;
-    avcodec_register(&ff_mjpeg_decoder);
-    /*register parsers*/
-    //extern AVCodecParser ff_h264_parser;
-    //av_register_codec_parser(&ff_h264_parser);
-    //extern AVCodecParser ff_mpeg4video_parser;
-    //av_register_codec_parser(&ff_mpeg4video_parser);
-    /*register demux*/
-    extern AVInputFormat ff_mov_demuxer;
-    av_register_input_format(&ff_mov_demuxer);
-    //extern AVInputFormat ff_h264_demuxer;
-    //av_register_input_format(&ff_h264_demuxer);
-    /*register the protocol*/
-    extern URLProtocol ff_file_protocol;
-    av_register_protocol2(&ff_file_protocol, sizeof(ff_file_protocol));
+    av_register_all();
+    LOGI(10, "registered all!");
     /*open the video file*/
-    if ((lError = av_open_input_file(&gFormatCtx, gFileName, NULL, 0, NULL)) !=0 ) {
+    if ((lError = avformat_open_input(&gFormatCtx, gFilename, NULL, NULL)) < 0 ) {
         LOGE(1, "Error open video file: %d", lError);
         return -1;	//open file failed
     }
+    LOGI(10, "Opened file")
     /*retrieve stream information*/
     if ((lError = av_find_stream_info(gFormatCtx)) < 0) {
         LOGE(1, "Error find stream information: %d", lError);
         return -2;
     } 
+    LOGI(10, "found stream info")
     /*find the video stream and its decoder*/
     gVideoStreamIndex = av_find_best_stream(gFormatCtx, AVMEDIA_TYPE_VIDEO, -1, -1, &lVideoCodec, 0);
     if (gVideoStreamIndex == AVERROR_STREAM_NOT_FOUND) {
         LOGE(1, "Error: cannot find a video stream");
         return -3;
-    } else {
-	LOGI(10, "video codec: %s", lVideoCodec->name);
     }
+
+    LOGI(10, "video codec: %s", lVideoCodec->name);
+
     if (gVideoStreamIndex == AVERROR_DECODER_NOT_FOUND) {
         LOGE(1, "Error: video stream found, but no decoder is found!");
         return -4;
@@ -121,7 +103,7 @@ JNIEXPORT void JNICALL Java_com_appunite_ffmpeg_FFmpeg_naClose(JNIEnv *pEnv, job
 JNIEXPORT jint JNICALL Java_com_appunite_ffmpeg_FFmpeg_naInit(JNIEnv *pEnv, jobject pObj, jstring pFileName) {
     int l_mbH, l_mbW;
     /*get the video file name*/
-    gFileName = (char *)(*pEnv)->GetStringUTFChars(pEnv, pFileName, NULL);
+    char *gFileName = (char *)(*pEnv)->GetStringUTFChars(pEnv, pFileName, NULL);
     if (gFileName == NULL) {
         LOGE(1, "Error: cannot get the video file name!");
         return -1;
@@ -129,16 +111,17 @@ JNIEXPORT jint JNICALL Java_com_appunite_ffmpeg_FFmpeg_naInit(JNIEnv *pEnv, jobj
     LOGI(10, "video file name is %s", gFileName);
     int code = get_video_info(gFileName);
     LOGI(10, "initialization done with status code: %d", code);
+    (*pEnv)->ReleaseStringUTFChars(pEnv, pFileName, gFileName);
     return code;
 }
 
 JNIEXPORT jstring JNICALL Java_com_appunite_ffmpeg_FFmpeg_naGetVideoCodecName(JNIEnv *pEnv, jobject pObj) {
-    char* lCodecName = gVideoCodecCtx->codec->name;
+    const char* lCodecName = gVideoCodecCtx->codec->name;
     return (*pEnv)->NewStringUTF(pEnv, lCodecName);
 }
 
 JNIEXPORT jstring JNICALL Java_com_appunite_ffmpeg_FFmpeg_naGetVideoFormatName(JNIEnv *pEnv, jobject pObj) {
-    char* lFormatName = gFormatCtx->iformat->name;
+    const char* lFormatName = gFormatCtx->iformat->name;
     return (*pEnv)->NewStringUTF(pEnv, lFormatName);
 }
 

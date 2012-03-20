@@ -374,25 +374,25 @@ int VideoConverter_convertFrames(VideoConverter *vc) {
 			}
 			if (out_size > 0) {
 				LOGI(10, "Writing audio frame\n");
-//				AVPacket pkt;
-//				av_init_packet(&pkt);
-//
-//				pkt.pts = av_rescale_q(packet.pts,
-//						vc->inputAudioStream->time_base,
-//						vc->outputAudioStream->time_base);
-//
-//				pkt.flags |= AV_PKT_FLAG_KEY;
-//				pkt.stream_index = vc->outputAudioStream->index;
-//				pkt.data = vc->outputAudioBuf;
-//				pkt.size = out_size;
-//				pkt.dts = AV_NOPTS_VALUE;
-//
-//				/* write the compressed frame in the media file */
-//				ret = av_interleaved_write_frame(vc->outputFormatCtx, &pkt);
-//				if (ret < 0) {
-//					LOGE(1, "Error while writing audio frame\n");
-//					continue;
-//				}
+				AVPacket pkt;
+				av_init_packet(&pkt);
+
+				pkt.pts = av_rescale_q(packet.pts,
+						vc->inputAudioStream->time_base,
+						vc->outputAudioStream->time_base);
+
+				pkt.flags |= AV_PKT_FLAG_KEY;
+				pkt.stream_index = vc->outputAudioStream->index;
+				pkt.data = vc->outputAudioBuf;
+				pkt.size = out_size;
+				pkt.dts = AV_NOPTS_VALUE;
+
+				/* write the compressed frame in the media file */
+				ret = av_interleaved_write_frame(vc->outputFormatCtx, &pkt);
+				if (ret < 0) {
+					LOGE(1, "Error while writing audio frame\n");
+					continue;
+				}
 				LOGI(10, "Wrote encoded audio frame\n");
 			}
 		}
@@ -631,9 +631,12 @@ int VideoConverter_createAudioStream(VideoConverter *vc) {
 	c->codec_type = AVMEDIA_TYPE_AUDIO;
 
 	/* put sample parameters */
-	c->sample_fmt = AV_SAMPLE_FMT_S16;
-	c->bit_rate = 64000;
-	c->sample_rate = 44100;
+	//c->sample_fmt = AV_SAMPLE_FMT_S16;
+	//c->bit_rate = 64000;
+	//c->sample_rate = 44100;
+	c->sample_fmt = iC->sample_fmt;
+	c->bit_rate = iC->bit_rate;
+	c->sample_rate = iC->sample_rate;
 	c->channels = iC->channels;
 
 	// some formats want stream headers to be separate

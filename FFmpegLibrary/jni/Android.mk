@@ -9,6 +9,7 @@ LOCAL_PRELINK_MODULE := true
 include $(PREBUILT_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
+#LOCAL_CFLAGS := -g
 LOCAL_ALLOW_UNDEFINED_SYMBOLS=false
 LOCAL_MODULE := ffmpeg-jni
 LOCAL_SRC_FILES := ffmpeg-jni.c ffmpeg-converter.c
