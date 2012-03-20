@@ -350,30 +350,30 @@ int VideoConverter_convertFrames(VideoConverter *vc) {
 			LOGI(10, "Encoded video frame\n");
 
 		} else if (packet.stream_index == vc->inputAudioStreamNumber) {
-//			if (samples_size
-//					< FFMAX(packet.size*sizeof(*samples), AVCODEC_MAX_AUDIO_FRAME_SIZE)) {
-//				samples_size =
-//						FFMAX(packet.size*sizeof(*samples), AVCODEC_MAX_AUDIO_FRAME_SIZE);
-//				av_free(samples);
-//				samples = av_malloc(samples_size);
-//			}
-//			unsigned int decoded_data_size = samples_size;
-//			int ret = avcodec_decode_audio3(vc->inputAudioCodecCtx, samples,
-//					&decoded_data_size, &packet);
-//			if (ret < 0) {
-//				LOGE(1, "Fail decoding audio frame");
-//				continue;
-//			}
-//			LOGI(10, "Decoded audio frame");
-//
-//			int out_size = avcodec_encode_audio(vc->outputAudioCodecCtx,
-//					vc->outputAudioBuf, vc->outputAudioBufSize, samples);
-//			if (out_size < 0) {
-//				LOGE(1, "Error while encoding audio");
-//				continue;
-//			}
-//			if (out_size > 0) {
-//				LOGI(10, "Writing audio frame\n");
+			if (samples_size
+					< FFMAX(packet.size*sizeof(*samples), AVCODEC_MAX_AUDIO_FRAME_SIZE)) {
+				samples_size =
+						FFMAX(packet.size*sizeof(*samples), AVCODEC_MAX_AUDIO_FRAME_SIZE);
+				av_free(samples);
+				samples = av_malloc(samples_size);
+			}
+			unsigned int decoded_data_size = samples_size;
+			int ret = avcodec_decode_audio3(vc->inputAudioCodecCtx, samples,
+					&decoded_data_size, &packet);
+			if (ret < 0) {
+				LOGE(1, "Fail decoding audio frame");
+				continue;
+			}
+			LOGI(10, "Decoded audio frame");
+
+			int out_size = avcodec_encode_audio(vc->outputAudioCodecCtx,
+					vc->outputAudioBuf, vc->outputAudioBufSize, samples);
+			if (out_size < 0) {
+				LOGE(1, "Error while encoding audio");
+				continue;
+			}
+			if (out_size > 0) {
+				LOGI(10, "Writing audio frame\n");
 //				AVPacket pkt;
 //				av_init_packet(&pkt);
 //
@@ -381,8 +381,7 @@ int VideoConverter_convertFrames(VideoConverter *vc) {
 //						vc->inputAudioStream->time_base,
 //						vc->outputAudioStream->time_base);
 //
-//				if (vc->outputAudioCodecCtx->coded_frame->key_frame)
-//					pkt.flags |= AV_PKT_FLAG_KEY;
+//				pkt.flags |= AV_PKT_FLAG_KEY;
 //				pkt.stream_index = vc->outputAudioStream->index;
 //				pkt.data = vc->outputAudioBuf;
 //				pkt.size = out_size;
@@ -394,8 +393,8 @@ int VideoConverter_convertFrames(VideoConverter *vc) {
 //					LOGE(1, "Error while writing audio frame\n");
 //					continue;
 //				}
-//				LOGI(10, "Wrote encoded audio frame\n");
-//			}
+				LOGI(10, "Wrote encoded audio frame\n");
+			}
 		}
 	}
 	av_write_trailer(vc->outputFormatCtx);
