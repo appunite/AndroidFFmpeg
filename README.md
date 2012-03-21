@@ -34,6 +34,26 @@ ndk-build
 Import FFmpegLibrary and FFmpegExample to your eclipse
 Run FFmpegExample as your android project 
 
+MORE CODECS
+============
+If you nead more codecs:
+#edit build_android.sh
+#add more codecs in ffmpeg configuration section
+
+#remove old ffmpeg build directory
+rm -r ffmpeg-build
+#build ffmpeg end supporting libraries
+./build_android.sh
+#during this process make sure that ffmpeg configuation goes without error
+#after build make sure that files FFmpegLibrary/libs/{armeabi,armeabi-v7a,x86}/libffmpeg.so was created, otherwise you are in truble
+
+#build your ndk library
+ndk-build
+
+refresh your FFmpegLibrary project in eclipse!!!!
+build your FFmpegExample project 
+
+
 CREDITS
 =============
 Library made by Jacek Marchwicki from Appunite.com
