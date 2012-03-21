@@ -106,10 +106,10 @@ function build_one
 	cd ..
 }
 
-#arm v6
+#arm v5
 EABIARCH=arm-linux-androideabi
 ARCH=arm
-CPU=armv6
+CPU=armv5
 OPTIMIZE_CFLAGS="-marm -march=$CPU"
 PREFIX=../ffmpeg-build/armeabi
 ADDITIONAL_CONFIGURE_FLAG=
@@ -117,6 +117,18 @@ PREBUILT=$NDK/toolchains/arm-linux-androideabi-4.4.3/prebuilt/$OS-x86
 PLATFORM_VERSION=android-5
 build_aac
 build_one
+
+#arm v6
+#EABIARCH=arm-linux-androideabi
+#ARCH=arm
+#CPU=armv6
+#OPTIMIZE_CFLAGS="-marm -march=$CPU"
+#PREFIX=../ffmpeg-build/armeabi-v6
+#ADDITIONAL_CONFIGURE_FLAG=
+#PREBUILT=$NDK/toolchains/arm-linux-androideabi-4.4.3/prebuilt/$OS-x86
+#PLATFORM_VERSION=android-5
+#build_aac
+#build_one
 
 #x86
 EABIARCH=i686-android-linux
