@@ -4,8 +4,7 @@ if [ "$NDK" = "" ]; then
 	exit 1
 fi
 
-#OS=linux
-OS=darwin
+OS=`uname -s | tr '[A-Z]' '[a-z]'`
 
 function build_aac
 {
