@@ -55,7 +55,6 @@ struct VideoConverter {
 	AVCodecContext *outputAudioCodecCtx;
 	AVCodec *outputVideoCodec;
 	AVCodec *outputAudioCodec;
-	AVFrame *outputVideoFrame;
 
 	uint8_t *outputVideoBuf;
 	int outputVideoBufSize;
@@ -291,13 +290,6 @@ int VideoConverter_convertFrames(VideoConverter *vc) {
 			}
 			printf("Decoded video frame\n");
 
-			ret = avcodec_encode_video(vc->outputVideoCodecCtx,
-					vc->outputVideoBuf, vc->outputVideoBufSize,
-					vc->outputVideoFrame);
-			if (ret < 0) {
-				LOGE(1, "Fail encoding video\n");
-				return -2;
-			}
 			if (vc->outputFormatCtx->oformat->flags & AVFMT_RAWPICTURE) {
 				LOGI(10, "Writing raw video frame\n");
 				/* raw video case. The API will change slightly in the near
@@ -356,6 +348,10 @@ int VideoConverter_convertFrames(VideoConverter *vc) {
 						FFMAX(packet.size*sizeof(*samples), AVCODEC_MAX_AUDIO_FRAME_SIZE);
 				av_free(samples);
 				samples = av_malloc(samples_size);
+				if (!samples) {
+					LOGE(1, "Could not allocate sample for audio decoding");
+					return -1;
+				}
 			}
 			unsigned int decoded_data_size = samples_size;
 			int ret = avcodec_decode_audio3(vc->inputAudioCodecCtx, samples,
@@ -540,27 +536,6 @@ int VideoConverter_createVideoStream(VideoConverter *vc) {
 	return 0;
 }
 
-int VideoConverter_allocPicture(VideoConverter *vc) {
-
-	AVCodecContext *c = vc->outputVideoCodecCtx;
-	uint8_t *picture_buf;
-	int size;
-
-	vc->outputVideoFrame = avcodec_alloc_frame();
-	if (!vc->outputVideoFrame)
-		return -2;
-	size = avpicture_get_size(c->pix_fmt, c->width, c->height);
-	picture_buf = av_malloc(size);
-	if (!picture_buf) {
-		av_free(vc->outputVideoFrame);
-		vc->outputVideoFrame = NULL;
-		return -1;
-	}
-	avpicture_fill((AVPicture *) vc->outputVideoFrame, picture_buf, c->pix_fmt,
-			c->width, c->height);
-	return 0;
-}
-
 int VideoConverter_openVideoStream(VideoConverter *vc) {
 	AVCodecContext *c = vc->outputVideoCodecCtx;
 
@@ -582,13 +557,6 @@ int VideoConverter_openVideoStream(VideoConverter *vc) {
 		return -2;
 	}
 
-	/* allocate the encoded raw picture */
-	int ret = VideoConverter_allocPicture(vc);
-	if (ret < 0) {
-		fprintf(stderr, "Could not allocate output frame\n");
-		return -3;
-	}
-
 	vc->outputVideoBuf = NULL;
 	vc->outputVideoBufSize = 0;
 	if (!(vc->outputFormatCtx->oformat->flags & AVFMT_RAWPICTURE)) {
@@ -608,8 +576,6 @@ int VideoConverter_openVideoStream(VideoConverter *vc) {
 
 void VideoConverter_closeVideoStream(VideoConverter *vc) {
 	avcodec_close(vc->outputVideoStream->codec);
-	av_free(vc->outputVideoFrame->data[0]);
-	av_free(vc->outputVideoFrame);
 	av_free(vc->outputVideoBuf);
 }
 

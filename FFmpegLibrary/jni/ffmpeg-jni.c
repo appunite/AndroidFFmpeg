@@ -45,7 +45,8 @@ AVCodecContext *gVideoCodecCtx = NULL;
 static int get_video_info(char *gFilename) {
 
     LOGI(10, "getting video info from file: %s", gFilename);
-
+    if (gFormatCtx != NULL)
+    	return -6;
     AVCodec *lVideoCodec;
     int lError;
     /*some global variables initialization*/
@@ -56,12 +57,15 @@ static int get_video_info(char *gFilename) {
     /*open the video file*/
     if ((lError = avformat_open_input(&gFormatCtx, gFilename, NULL, NULL)) < 0 ) {
         LOGE(1, "Error open video file: %d", lError);
+        gFormatCtx = NULL;
         return -1;	//open file failed
     }
     LOGI(10, "Opened file")
     /*retrieve stream information*/
     if ((lError = av_find_stream_info(gFormatCtx)) < 0) {
         LOGE(1, "Error find stream information: %d", lError);
+        av_close_input_file(gFormatCtx);
+        gFormatCtx = NULL;
         return -2;
     } 
     LOGI(10, "found stream info")
@@ -69,6 +73,8 @@ static int get_video_info(char *gFilename) {
     gVideoStreamIndex = av_find_best_stream(gFormatCtx, AVMEDIA_TYPE_VIDEO, -1, -1, &lVideoCodec, 0);
     if (gVideoStreamIndex == AVERROR_STREAM_NOT_FOUND) {
         LOGE(1, "Error: cannot find a video stream");
+        av_close_input_file(gFormatCtx);
+        gFormatCtx = NULL;
         return -3;
     }
 
@@ -76,6 +82,8 @@ static int get_video_info(char *gFilename) {
 
     if (gVideoStreamIndex == AVERROR_DECODER_NOT_FOUND) {
         LOGE(1, "Error: video stream found, but no decoder is found!");
+        av_close_input_file(gFormatCtx);
+        gFormatCtx = NULL;
         return -4;
     }   
     /*open the codec*/
@@ -86,6 +94,9 @@ static int get_video_info(char *gFilename) {
 #endif
     if (avcodec_open(gVideoCodecCtx, lVideoCodec) < 0) {
 	LOGE(1, "Error: cannot open the video codec!");
+		lVideoCodec = NULL;
+		av_close_input_file(gFormatCtx);
+		gFormatCtx = NULL;
         return -5;
     }
     LOGI(10, "get video info ends");
@@ -98,6 +109,8 @@ JNIEXPORT void JNICALL Java_com_appunite_ffmpeg_FFmpeg_naClose(JNIEnv *pEnv, job
     avcodec_close(gVideoCodecCtx);
     /*close the video file*/
     av_close_input_file(gFormatCtx);
+    gFormatCtx = NULL;
+    gVideoCodecCtx = NULL;
 }
 
 JNIEXPORT jint JNICALL Java_com_appunite_ffmpeg_FFmpeg_naInit(JNIEnv *pEnv, jobject pObj, jstring pFileName) {
@@ -116,21 +129,37 @@ JNIEXPORT jint JNICALL Java_com_appunite_ffmpeg_FFmpeg_naInit(JNIEnv *pEnv, jobj
 }
 
 JNIEXPORT jstring JNICALL Java_com_appunite_ffmpeg_FFmpeg_naGetVideoCodecName(JNIEnv *pEnv, jobject pObj) {
+	if (gVideoCodecCtx == NULL) {
+		LOGE(1, "format context not created");
+		return NULL;
+	}
     const char* lCodecName = gVideoCodecCtx->codec->name;
+    if (lCodecName == NULL)
+    	return NULL;
     return (*pEnv)->NewStringUTF(pEnv, lCodecName);
 }
 
 JNIEXPORT jstring JNICALL Java_com_appunite_ffmpeg_FFmpeg_naGetVideoFormatName(JNIEnv *pEnv, jobject pObj) {
+	if (gFormatCtx == NULL) {
+		LOGE(1, "format context not created");
+		return NULL;
+	}
     const char* lFormatName = gFormatCtx->iformat->name;
+    if (lFormatName == NULL)
+    	return NULL;
     return (*pEnv)->NewStringUTF(pEnv, lFormatName);
 }
 
 
 JNIEXPORT jintArray JNICALL Java_com_appunite_ffmpeg_FFmpeg_naGetVideoResolution(JNIEnv *pEnv, jobject pObj) {
     jintArray lRes;
+    if (gVideoCodecCtx == NULL) {
+    	LOGE(1, "codec context not created");
+    	return NULL;
+    }
     lRes = (*pEnv)->NewIntArray(pEnv, 2);
     if (lRes == NULL) {
-        LOGI(1, "cannot allocate memory for video size");
+        LOGE(1, "cannot allocate memory for video size");
         return NULL;
     }
     jint lVideoRes[2];

@@ -221,7 +221,7 @@ public class FFmpegExampleActivity extends FragmentActivity implements
 		String videoFilename = item.getAbsolutePath();
 		String displayText;
 		int error = FFmpeg.naInit(videoFilename);
-		if (error == 0) {
+		if (error >= 0) {
 			int[] prVideoRes = FFmpeg.naGetVideoResolution();
 			String prVideoCodecName = FFmpeg.naGetVideoCodecName();
 			String prVideoFormatName = FFmpeg.naGetVideoFormatName();
