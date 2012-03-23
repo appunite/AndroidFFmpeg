@@ -7,7 +7,12 @@ LICENSE
 Coypyright (C) 2012 Appunite.com
 Licensed under the Apache License, Verision 2.0
 
-FFmpeg and libvo-aacenc projects are distributed on theirs own license.
+FFmpeg, libvo-aacenc, vo-amrwbenc and others libraries projects are distributed on theirs own license.
+
+PATENT DISCLIMER
+============== 
+We do not grant of patent rigts.
+Some codecs use patented techniques and before use those parts of library you have to buy thrid-party patents.
 
 INSTALATION
 ==============
@@ -20,6 +25,11 @@ cd jni
 
 #setup vo-aacenc environment
 cd vo-aacenc
+autoreconf
+cd ..
+
+#setup vo-amrwbenc environment
+cd vo-amrwbenc
 autoreconf
 cd ..
 
