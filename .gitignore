@@ -5,12 +5,14 @@ FFmpegLibrary/tmp/**
 FFmpegLibrary/obj/**
 FFmpegLibrary/libs/**
 FFmpegLibrary/proguard/**
+FFmpegLibrary/.classpath
 
 FFmpegExample/bin/**
 FFmpegExample/gen/**
 FFmpegExample/tmp/**
 FFmpegExample/obj/**
 FFmpegExample/proguard/**
+FFmpegExample/.classpath
 
 
 *.tmp
