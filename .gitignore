@@ -5,16 +5,20 @@ FFmpegLibrary/tmp/**
 FFmpegLibrary/obj/**
 FFmpegLibrary/libs/**
 FFmpegLibrary/proguard/**
-FFmpegLibrary/.classpath
+FFmpegLibrary/.settings/**
+FFmpegLibrary/jni/.settings/**
 
 FFmpegExample/bin/**
 FFmpegExample/gen/**
 FFmpegExample/tmp/**
 FFmpegExample/obj/**
 FFmpegExample/proguard/**
-FFmpegExample/.classpath
+FFmpegExample/.settings/**
 
 
+.cproject
+.classpath
+.project
 *.tmp
 *.bak
 *.swp
