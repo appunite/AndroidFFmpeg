@@ -169,7 +169,7 @@ JNIEXPORT jintArray JNICALL Java_com_appunite_ffmpeg_FFmpeg_naGetVideoResolution
     return lRes;
 }
 
-void convertToFile(VideoConverter *vc, char *outputFile) {
+void convertToMov(VideoConverter *vc, char *outputFile) {
 	int err;
 	err = VideoConverter_openOutputFile(vc, outputFile);
 	if (err >= 0) {
@@ -224,7 +224,62 @@ void convertToFile(VideoConverter *vc, char *outputFile) {
 	}
 }
 
-JNIEXPORT jint JNICALL Java_com_appunite_ffmpeg_FFmpeg_naConvert(JNIEnv *pEnv, jobject pObj, jstring jInputFile, jstring jOutputFile) {
+void convertToMpeg(VideoConverter *vc, char *outputFile) {
+	int err;
+	err = VideoConverter_openOutputFile(vc, outputFile);
+	if (err >= 0) {
+		LOGI(10, "Opened output file VideoConverter");
+		int hasOutputVideoCodec = VideoConverter_hasOutputVideoCodec(vc);
+		int hasOutputAudioCodec = VideoConverter_hasOutputAudioCodec(vc);
+		if (hasOutputAudioCodec && hasOutputVideoCodec) {
+			LOGI(10, "Has codecs VideoConverter");
+			err = VideoConverter_createVideoStream(vc);
+			if (err >= 0) {
+				LOGI(10, "Created video stream VideoConverter");
+				err = VideoConverter_openVideoStream(vc);
+				if (err >= 0) {
+					LOGI(10, "Opened video stream VideoConverter");
+					err = VideoConverter_createAudioStream(vc);
+					if (err >= 0) {
+						LOGI(10, "Created audio stream VideoConverter");
+						err = VideoConverter_openAudioStream(vc);
+						if (err >= 0) {
+							LOGI(10, "Opened audio stream VideoConverter");
+							LOGI(10, "Doing the work");
+							VideoConverter_convertFrames(vc);
+							LOGI(10, "Done work");
+							VideoConverter_closeAudioStream(vc);
+						} else {
+							LOGE(1, "Could not open audio stream");
+						}
+						VideoConverter_freeAudioStream(vc);
+					} else {
+						LOGE(1, "Could not create audio stream");
+					}
+					VideoConverter_closeVideoStream(vc);
+				} else {
+					LOGE(1, "Could not open video stream");
+				}
+				VideoConverter_freeVideoStream(vc);
+			} else {
+				LOGE(1, "Could not create video stream");
+			}
+		}
+		if (!hasOutputAudioCodec) {
+			VideoConverter_printAllCodecs();
+			LOGE(1, "File does not have audio codec");
+		}
+		if (!hasOutputVideoCodec) {
+			VideoConverter_printAllCodecs();
+			LOGE(1, "File does not have video codec");
+		}
+		VideoConverter_closeOutputFile(vc);
+	} else {
+		LOGE(1, "Could not open output file: %s", outputFile);
+	}
+}
+
+JNIEXPORT jint JNICALL Java_com_appunite_ffmpeg_FFmpeg_naConvertMovToMpeg(JNIEnv *pEnv, jobject pObj, jstring jInputFile, jstring jOutputFile) {
 	char *inputFile = (char *)(*pEnv)->GetStringUTFChars(pEnv, jInputFile, NULL);
 	char *outputFile = (char *)(*pEnv)->GetStringUTFChars(pEnv, jOutputFile, NULL);
 
@@ -251,7 +306,60 @@ JNIEXPORT jint JNICALL Java_com_appunite_ffmpeg_FFmpeg_naConvert(JNIEnv *pEnv, j
 						LOGI(10, "Found audio codec VideoConverter");
 						VideoConverter_createFrame(vc);
 
-						convertToFile(vc, outputFile);
+						convertToMpeg(vc, outputFile);
+						//VideoConverter_readFrames(vc); // work
+
+						VideoConverter_freeFrame(vc);
+						VideoConverter_closeAudioCodec(vc);
+					} else {
+						LOGE(1, "Could not find audio codec");
+					}
+					VideoConverter_closeVideoCodec(vc);
+				} else {
+					LOGE(1, "Could not find video codec");
+				}
+			} else {
+				LOGE(1, "Could not find audio stream");
+			}
+		} else {
+			LOGE(1, "Could not find video stream");
+		}
+		VideoConverter_closeFile(vc);
+	} else {
+		LOGE(1, "Could not open video file");
+	}
+	VideoConverter_free(vc);
+	return 0;
+}
+
+JNIEXPORT jint JNICALL Java_com_appunite_ffmpeg_FFmpeg_naConvertMpegToMov(JNIEnv *pEnv, jobject pObj, jstring jInputFile, jstring jOutputFile) {
+	char *inputFile = (char *)(*pEnv)->GetStringUTFChars(pEnv, jInputFile, NULL);
+	char *outputFile = (char *)(*pEnv)->GetStringUTFChars(pEnv, jOutputFile, NULL);
+
+	int err;
+	VideoConverter *vc = VideoConverter_init();
+	VideoConverter_register(vc);
+	LOGI(10, "Initialized VideoConverter");
+	VideoConverter_printAllCodecs();
+	err = VideoConverter_openFile(vc, inputFile);
+	if (err >= 0) {
+		LOGI(10, "Opened VideoConverter");
+		VideoConverter_dumpFormat(vc);
+		err = VideoConverter_findVideoStream(vc);
+		if (err >= 0) {
+			LOGI(10, "Found video stream VideoConverter");
+			err = VideoConverter_findAudioStream(vc);
+			if (err >= 0) {
+				LOGI(10, "Found audio stream VideoConverter");
+				err = VideoConverter_findVideoCodec(vc);
+				if (err >= 0) {
+					LOGI(10, "Found video codec VideoConverter");
+					err = VideoConverter_findAudioCodec(vc);
+					if (err >= 0) {
+						LOGI(10, "Found audio codec VideoConverter");
+						VideoConverter_createFrame(vc);
+
+						convertToMov(vc, outputFile);
 						//VideoConverter_readFrames(vc); // work
 
 						VideoConverter_freeFrame(vc);

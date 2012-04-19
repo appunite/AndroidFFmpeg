@@ -8,7 +8,10 @@ public class FFmpeg {
 
 	public static native void naClose();
 
-	public static native int naConvert(String inputFileName,
+	public static native int naConvertMovToMpeg(String inputFileName,
+			String outputFileName);
+
+	public static native int naConvertMpegToMov(String inputFileName,
 			String outputFileName);
 
 	public static native String naGetVideoCodecName();

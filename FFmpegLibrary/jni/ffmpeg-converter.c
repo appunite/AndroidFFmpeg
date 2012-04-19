@@ -31,9 +31,6 @@
 #define STREAM_FRAME_RATE 30 /* 25 images/s */
 #define STREAM_PIX_FMT PIX_FMT_YUV420P /* default pix_fmt */
 
-static char *inputFile = "video.mov";
-static char *outputFile = "video.mpeg";
-
 struct VideoConverter {
 	AVFormatContext *inputFormatCtx;
 	char *inputFileName;
