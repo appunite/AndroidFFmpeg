@@ -1,5 +1,6 @@
 FFmpegLibrary/jni/ffmpeg-build/**
 FFmpegLibrary/bin/**
+FFmpegLibrary/local.properties
 FFmpegLibrary/gen/**
 FFmpegLibrary/tmp/**
 FFmpegLibrary/obj/**
@@ -12,6 +13,7 @@ FFmpegExample/bin/**
 FFmpegExample/gen/**
 FFmpegExample/tmp/**
 FFmpegExample/obj/**
+FFmpegExample/local.properties
 FFmpegExample/proguard/**
 FFmpegExample/.settings/**
 
