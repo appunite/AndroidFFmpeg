@@ -1,0 +1,24 @@
+The code contained here is Copyright (C) 2008-2009 Robin Watts
+<robin@wss.co.uk>
+
+This code provides optimised ARM code (and the C equivalents) for fast
+conversion of YUV420, YUV422 and YUV444 code to RGB565.
+
+For ARM platforms, use the ARM code, as this will result in significantly
+faster results (due to no register spillage in the loops, improved
+scheduling etc).
+
+For other platforms, use the C code - this is deliberately kept as close
+as possible to the ARM code.
+
+yuv2rgb.h is the overall header. #include this.
+
+yuv2rgb16tab.c contains the definition of the standard table used by
+all the routines (and passed in as a parameter). You can use this, or
+define your own table.
+
+Future versions of this software may include routines to generate tables
+with given weights.
+
+The latest version of this software should always be available from
+<http://www.wss.co.uk/pinknoise/yuv2rgb>

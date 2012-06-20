@@ -7,3 +7,6 @@
 [submodule "FFmpegLibrary/jni/vo-amrwbenc"]
 	path = FFmpegLibrary/jni/vo-amrwbenc
 	url = git://opencore-amr.git.sourceforge.net/gitroot/opencore-amr/vo-amrwbenc
+[submodule "FFmpegLibrary/jni/x264"]
+	path = FFmpegLibrary/jni/x264
+	url = git://git.videolan.org/x264.git
