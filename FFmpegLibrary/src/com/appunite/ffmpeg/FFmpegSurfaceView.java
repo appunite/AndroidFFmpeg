@@ -100,28 +100,37 @@ public class FFmpegSurfaceView extends SurfaceView implements FFmpegDisplay,
 						while (mMpegPlayerLock == null)
 							mMpegPlayerLock.wait();
 						RenderedFrame renderFrame = mMpegPlayer.renderFrame();
-						Canvas canvas = mSurfaceHolder.lockCanvas();
-						if (canvas == null)
-							return;
-						canvas.save();
-						float ratiow = mSurfaceWidth
-								/ (float) renderFrame.width;
-						float ratioh = mSurfaceHeight
-								/ (float) renderFrame.height;
-						float ratio = ratiow > ratioh ? ratioh : ratiow;
-						float moveX = ((renderFrame.width * ratio - mSurfaceWidth) / 2.0f);
-						float moveY = ((renderFrame.height * ratio - mSurfaceHeight) / 2.0f);
-						canvas.translate(-moveX, -moveY);
-						canvas.scale(ratio, ratio);
-
-						canvas.drawBitmap(renderFrame.bitmap, 0, 0, null);
-						mMpegPlayer.releaseFrame();
-						canvas.restore();
-
-						String fps = fpsCounter.tick();
-						canvas.drawText(fps, 40 - moveX, 40 - moveY, mPaint);
-
-						mSurfaceHolder.unlockCanvasAndPost(canvas);
+						if (renderFrame == null)
+							throw new RuntimeException();
+						if (renderFrame.bitmap == null)
+							throw new RuntimeException();
+						try {
+							Canvas canvas = mSurfaceHolder.lockCanvas();
+							if (canvas == null)
+								return;
+							try {
+								canvas.save();
+								float ratiow = mSurfaceWidth
+										/ (float) renderFrame.width;
+								float ratioh = mSurfaceHeight
+										/ (float) renderFrame.height;
+								float ratio = ratiow > ratioh ? ratioh : ratiow;
+								float moveX = ((renderFrame.width * ratio - mSurfaceWidth) / 2.0f);
+								float moveY = ((renderFrame.height * ratio - mSurfaceHeight) / 2.0f);
+								canvas.translate(-moveX, -moveY);
+								canvas.scale(ratio, ratio);
+		
+								canvas.drawBitmap(renderFrame.bitmap, 0, 0, null);
+								canvas.restore();
+		
+								String fps = fpsCounter.tick();
+								canvas.drawText(fps, 40 - moveX, 40 - moveY, mPaint);
+							} finally {
+								mSurfaceHolder.unlockCanvasAndPost(canvas);
+							}
+						} finally {
+							mMpegPlayer.releaseFrame();							
+						}
 					}
 				} catch (InterruptedException e) {
 				}

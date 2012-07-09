@@ -33,8 +33,8 @@
 //#include <libavcodec/opt.h>
 #include <libavcodec/avfft.h>
 
-#include <android/log.h>
 #include <android/bitmap.h>
+#include <android/log.h>
 
 #include <jni.h>
 #include <pthread.h>
@@ -50,7 +50,6 @@
 
 /*local headers*/
 
-#define MIN_SLEEP_TIME_US 10000 // 1000000 us = 1 s
 #include "helpers.h"
 #include "queue.h"
 #include "player.h"
@@ -63,6 +62,9 @@
 
 #define FALSE 0
 #define TRUE (!(FALSE))
+
+// 1000000 us = 1 s
+#define MIN_SLEEP_TIME_US 10000
 
 void player_print_codec_description(AVCodec *codec) {
 	char *type = "???";
@@ -242,6 +244,7 @@ void throw_exception(JNIEnv *env, const char * exception_class_path_name,
 		assert(FALSE);
 	}
 	(*env)->ThrowNew(env, newExcCls, msg);
+	(*env)->DeleteLocalRef(env, newExcCls);
 }
 
 void throw_interrupted_exception(JNIEnv *env, const char * msg) {
@@ -327,8 +330,8 @@ void * player_decode_audio(void * data) {
 
 		LOGI(10, "Decoded audio frame\n");
 
-		if ((err = player_write_audio(player, env)) < 0) {
-			LOGI(10, "Could not write frame");
+		if ((err = player_write_audio(player, env))) {
+			LOGE(1, "Could not write frame");
 			goto end_loop;
 		}
 
@@ -596,7 +599,7 @@ void * player_read_from_stream(void *data) {
 
 int player_write_audio(struct Player *player, JNIEnv *env) {
 	AVFrame * frame = player->input_audio_frame;
-	int err;
+	int err = ERROR_NO_ERROR;
 	int ret;
 	LOGI(10, "Writing audio frame")
 	AVCodecContext * c = player->input_audio_codec_ctx;
@@ -631,10 +634,12 @@ int player_write_audio(struct Player *player, JNIEnv *env) {
 			player->audio_track_write_method, samples_byte_array, 0, data_size);
 	if (ret < 0) {
 		err = ERROR_PLAYING_AUDIO;
-		goto end;
+		LOGE(3, "Could not write audio track: reason: %d look in AudioTrack.write()", ret);
+		goto free_local_ref;
 	}
 
 	LOGI(10, "releasing local ref");
+	free_local_ref:
 	(*env)->DeleteLocalRef(env, samples_byte_array);
 
 	end: return err;
@@ -644,8 +649,9 @@ struct Player * player_get_player_field(JNIEnv *env, jobject thiz) {
 
 	jfieldID m_native_layer_field = java_get_field(env, player_class_path_name,
 			player_m_native_player);
-	return (struct Player *) (*env)->GetIntField(env, thiz,
+	struct Player * player = (struct Player *) (*env)->GetIntField(env, thiz,
 			m_native_layer_field);
+	return player;
 }
 
 void *player_fill_packet(struct Player *player) {
@@ -1047,8 +1053,12 @@ int player_set_data_source(struct State *state, const char *file_path) {
 		err = ERROR_NOT_CREATED_AUDIO_TRACK;
 		goto close_audio_codec;
 	}
+
 	LOGI(3, "15");
 	player->audio_track = (*state->env)->NewGlobalRef(state->env, audio_track);
+	if (player->audio_track == NULL) {
+		// TODO check audio track
+	}
 	(*state->env)->DeleteLocalRef(state->env, audio_track);
 
 	player->last_updated_time = -1;

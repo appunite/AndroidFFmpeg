@@ -22,7 +22,9 @@
 
 jfieldID java_get_field(JNIEnv *env, char * class_name, JavaField field) {
 	jclass clazz = (*env)->FindClass(env, class_name);
-	return (*env)->GetFieldID(env, clazz, field.name, field.signature);
+	jfieldID jField = (*env)->GetFieldID(env, clazz, field.name, field.signature);
+	(*env)->DeleteLocalRef(env, clazz);
+	return jField;
 }
 
 jmethodID java_get_method(JNIEnv *env, jclass class, JavaMethod method) {
