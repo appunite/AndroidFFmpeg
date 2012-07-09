@@ -1,8 +1,23 @@
+# Application.mk
+# Copyright (c) 2012 Jacek Marchwicki
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
-#presets - do not tuch
+#presets - do not tuch this
 FEATURE_NEON:=
 FEATURE_VFPV3:=
 LIBRARY_PROFILER:=
@@ -13,10 +28,10 @@ LIBRARY_YUV2RGB:=
 #if armeabi-v7a
 ifeq ($(TARGET_ARCH_ABI), armeabi-v7a)
 	# add neon optimization code (only armeabi-v7a)
-	FEATURE_NEON:=yes
+	#FEATURE_NEON:=yes
 	
 	# add vfpv3-d32 optimization code (only armeabi-v7a)
-	FEATURE_VFPV3:=yes
+	#FEATURE_VFPV3:=yes
 else
 
 endif
@@ -77,7 +92,7 @@ endif
 include $(CLEAR_VARS)
 LOCAL_ALLOW_UNDEFINED_SYMBOLS=false
 LOCAL_MODULE := ffmpeg-jni
-LOCAL_SRC_FILES := ffmpeg-jni.c player.c queue.c
+LOCAL_SRC_FILES := ffmpeg-jni.c player.c queue.c helpers.c jni-protocol.c
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/ffmpeg-build/$(TARGET_ARCH_ABI)/include
 LOCAL_SHARED_LIBRARY := ffmpeg-prebuilt
 
@@ -107,6 +122,15 @@ include $(BUILD_SHARED_LIBRARY)
 
 #nativetester-jni library
 include $(CLEAR_VARS)
+
+ifdef FEATURE_VFPV3
+	LOCAL_CFLAGS += -DFEATURE_VFPV3
+endif
+
+ifdef FEATURE_NEON
+	LOCAL_CFLAGS += -DFEATURE_NEON
+endif
+
 LOCAL_ALLOW_UNDEFINED_SYMBOLS=false
 LOCAL_MODULE := nativetester-jni
 LOCAL_SRC_FILES := nativetester-jni.c nativetester.c

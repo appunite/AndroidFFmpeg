@@ -1,4 +1,24 @@
+/*
+ * MainActivity.java
+ * Copyright (c) 2012 Jacek Marchwicki
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 package com.ffmpegtest;
+
+import java.io.File;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -7,6 +27,7 @@ import android.content.DialogInterface;
 import android.content.pm.ActivityInfo;
 import android.graphics.PixelFormat;
 import android.os.Bundle;
+import android.os.Environment;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.Window;
@@ -17,13 +38,14 @@ import com.appunite.ffmpeg.FFmpegDisplay;
 import com.appunite.ffmpeg.FFmpegError;
 import com.appunite.ffmpeg.FFmpegListener;
 import com.appunite.ffmpeg.FFmpegPlayer;
-import com.appunite.ffmpeg.FFmpegView;
 
 public class MainActivity extends Activity implements OnClickListener,
 		FFmpegListener {
 
 	private FFmpegPlayer mpegPlayer;
 	private static boolean isSurfaceView = true;
+	private ProgressBar progressBar;
+	protected boolean mPlay;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -45,76 +67,107 @@ public class MainActivity extends Activity implements OnClickListener,
 		else
 			this.setContentView(R.layout.main_view);
 
+		progressBar = (ProgressBar) this.findViewById(R.id.progress);
 
 		View playPauseView = this.findViewById(R.id.play_pause);
 		playPauseView.setOnClickListener(this);
 
-		FFmpegDisplay videoView = (FFmpegDisplay) this.findViewById(R.id.video_view);
-		this.mpegPlayer = new FFmpegPlayer(videoView);
-
-		this.mpegPlayer.setVideoListener(this);
+		FFmpegDisplay videoView = (FFmpegDisplay) this
+				.findViewById(R.id.video_view);
+		this.mpegPlayer = new FFmpegPlayer(videoView, this, this);
+		play();
 	}
 
 	@Override
 	protected void onPause() {
 		super.onPause();
-		this.mpegPlayer.stop();
 	};
 
 	@Override
 	protected void onResume() {
 		super.onResume();
-		try {
-			boolean http = true;
-//			String video = "trailer.mp4";
-//			String video = "sample.mp4";
-			String video = "HungerGamesTrailer1200.mp4";
-			//String video = "HungerGamesTrailer1200.mp4.enc";
-			//String video = "HungerGamesTrailer800.mp4";
-			//String video = "HungerGamesTrailer800.mp4.enc";
-			String url;
-			if (http) {
-				url =
-						String.format(
-								"http://192.168.1.116:1935/vod/mp4:%s/playlist.m3u8",
-								video);
-			} else {
-				url =
-						String.format("rtsp://192.168.1.116:1935/vod/mp4:%s",
-								video);
+	}
+	
+	@Override
+	protected void onDestroy() {
+		super.onDestroy();
+		this.mpegPlayer.stop();
+	}
+
+	private void play() {
+		Thread thread = new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				try {
+					boolean http = true;
+					boolean encrypted = false;
+					// String video = "trailer.mp4";
+					// String video = "sample.mp4";
+					// String video = "HungerGamesTrailer1200.mp4";
+					// String video = "HungerGamesTrailer1200.mp4.enc";
+					String video = "HungerGamesTrailer800.mp4";
+					// String video = "HungerGamesTrailer800.mp4.enc";
+					String host = "192.168.1.105";
+					String url;
+					String base;
+					if (encrypted) {
+						base = "inflight";
+					} else {
+						base = "vod";
+					}
+					if (http) {
+						url = String.format(
+								"http://%s:1935/%s/mp4:%s/playlist.m3u8", host,
+								base, video);
+					} else {
+						url = String.format("rtsp://%s:1935/%s/mp4:%s", host,
+								base, video);
+					}
+					// url =
+					// "http://devimages.apple.com.edgekey.net/resources/http-streaming/examples/bipbop_4x3/bipbop_4x3_variant.m3u8";
+					// // apple simple
+					// url =
+					// "https://devimages.apple.com.edgekey.net/resources/http-streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8";
+					// // apple advanced
+					File missionFile = new File(Environment.getExternalStorageDirectory(), "mission.mp4");
+					url = missionFile.getAbsolutePath();
+					
+					mpegPlayer.setDataSource(url);
+					mpegPlayer.resume();
+					mPlay = true;
+
+				} catch (final FFmpegError e) {
+					e.printStackTrace();
+					MainActivity.this.runOnUiThread(new Runnable() {
+
+						@Override
+						public void run() {
+
+							String format = getResources().getString(
+									R.string.main_could_not_open_stream);
+							String message = String.format(format,
+									e.getMessage());
+
+							Builder builder = new AlertDialog.Builder(
+									MainActivity.this);
+							builder.setTitle(R.string.app_name)
+									.setMessage(message)
+									.setOnCancelListener(
+											new DialogInterface.OnCancelListener() {
+
+												@Override
+												public void onCancel(
+														DialogInterface dialog) {
+													MainActivity.this.finish();
+												}
+											}).show();
+						}
+					});
+				}
 			}
-			this.mpegPlayer.setDataSource(url);
-			// this.mpegPlayer
-			// .setDataSource("http://192.168.1.116:1935/vod/mp4:trailer.mp4/playlist.m3u8");
-			// this.mpegPlayer
-			// .setDataSource("ffp");
-			// this.mpegPlayer
-			// .setDataSource("rtsp://192.168.1.116:1935/vod/mp4:trailer.mp4");
-			// this.mpegPlayer
-			// .setDataSource("/sdcard/Movies/App207/MOV__20120508_121616.mov");
-
-			this.mpegPlayer.play();
-			
-		} catch (FFmpegError e) {
-
-			String format =
-					this.getResources().getString(
-							R.string.main_could_not_open_stream);
-			String message = String.format(format, e.getMessage());
-
-			Builder builder = new AlertDialog.Builder(this);
-			builder.setTitle(R.string.app_name)
-					.setMessage(message)
-					.setOnCancelListener(
-							new DialogInterface.OnCancelListener() {
-
-								@Override
-								public void onCancel(DialogInterface dialog) {
-									MainActivity.this.finish();
-								}
-							}).show();
-			e.printStackTrace();
-		}
+		});
+		thread.start();
 	}
 
 	@Override
@@ -122,11 +175,23 @@ public class MainActivity extends Activity implements OnClickListener,
 		int viewId = v.getId();
 		switch (viewId) {
 		case R.id.play_pause:
-			this.mpegPlayer.playPause();
+			if (mPlay == true) {
+				mpegPlayer.pause();
+				mPlay = false;
+			} else {
+				mpegPlayer.resume();
+				mPlay = true;
+			}
 			return;
 
 		default:
 			throw new RuntimeException();
 		}
+	}
+
+	@Override
+	public void onUpdateTime(int currentTimeS, int videoDurationS) {
+		progressBar.setMax(videoDurationS);
+		progressBar.setProgress(currentTimeS);
 	}
 }

@@ -1,3 +1,22 @@
+#!/bin/bash
+/*
+ * build_android.sh
+ * Copyright (c) 2012 Jacek Marchwicki
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 if [ "$NDK" = "" ]; then
 	echo NDK variable not set, exiting
 	echo "Use: export NDK=/your/path/to/android-ndk"
@@ -26,12 +45,7 @@ function build_x264
 
 	export LDFLAGS="-Wl,-rpath-link=$PLATFORM/usr/lib -L$PLATFORM/usr/lib  -nostdlib -lc -lm -ldl -llog"
 	cd x264
-	./configure \
-	    --prefix=$(pwd)/$PREFIX \
-	    --host=$ARCH-linux \
-	    --enable-static \
-	    $ADDITIONAL_CONFIGURE_FLAG \
-	    || exit 1
+	./configure --prefix=$(pwd)/$PREFIX --host=$ARCH-linux --enable-static $ADDITIONAL_CONFIGURE_FLAG || exit 1
 
 	make clean || exit 1
 	make -j4 install || exit 1
@@ -147,6 +161,8 @@ function build_one
 	    --enable-muxer=mp4 \
 	    --enable-muxer=mov \
 	    --enable-muxer=mjpeg \
+	    --enable-protocol=crypto \
+	    --enable-protocol=jni \
 	    --enable-protocol=file \
 	    --enable-protocol=rtp \
 	    --enable-protocol=tcp \
@@ -192,6 +208,7 @@ function build_one
 	    --enable-libvo-amrwbenc \
 	    --enable-version3 \
 	    --enable-memalign-hack \
+	    --enable-asm \
 	    $ADDITIONAL_CONFIGURE_FLAG \
 	    || exit 1
 	make clean || exit 1
@@ -264,7 +281,6 @@ PREFIX=../ffmpeg-build/armeabi-v7a-neon
 ADDITIONAL_CONFIGURE_FLAG=--enable-neon
 PREBUILT=$NDK/toolchains/arm-linux-androideabi-4.4.3/prebuilt/$OS-x86
 PLATFORM_VERSION=android-9
-#build_x264
 build_amr
 build_aac
 build_one

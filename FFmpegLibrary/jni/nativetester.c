@@ -1,8 +1,19 @@
 /*
  * nativetester.c
+ * Copyright (c) 2012 Jacek Marchwicki
  *
- *  Created on: Jun 19, 2012
- *      Author: Jacek Marchwicki <jacek.marchwicki@gmail.com>
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
  */
 
 /*android specific headers*/
@@ -22,6 +33,7 @@
 
 jboolean jni_nativetester_is_neon(JNIEnv *env, jobject thiz) {
 	uint64_t features;
+#ifdef FEATURE_NEON
 
 	if (android_getCpuFamily() != ANDROID_CPU_FAMILY_ARM) {
 		LOGI(5, "Not an ARM CPU\n");
@@ -41,11 +53,14 @@ jboolean jni_nativetester_is_neon(JNIEnv *env, jobject thiz) {
 	}
 
 	return JNI_TRUE;
+#else
+	return JNI_FALSE;
+#endif
 }
 
 jboolean jni_nativetester_is_vfpv3(JNIEnv *env, jobject thiz) {
 	uint64_t features;
-
+#ifdef FEATURE_VFPV3
 	if (android_getCpuFamily() != ANDROID_CPU_FAMILY_ARM) {
 		LOGI(5, "Not an ARM CPU\n");
 		return JNI_FALSE;
@@ -64,5 +79,8 @@ jboolean jni_nativetester_is_vfpv3(JNIEnv *env, jobject thiz) {
 	}
 
 	return JNI_TRUE;
+#else
+	return JNI_FALSE;
+#endif
 }
 

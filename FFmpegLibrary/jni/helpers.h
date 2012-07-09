@@ -1,5 +1,5 @@
 /*
- * FFmpegListener.java
+ * helpers.h
  * Copyright (c) 2012 Jacek Marchwicki
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,10 +16,21 @@
  *
  */
 
-package com.appunite.ffmpeg;
+#ifndef HELPERS_H_
+#define HELPERS_H_
 
-public interface FFmpegListener {
+typedef struct {
+    const char* name;
+    const char* signature;
+} JavaMethod;
 
-	void onUpdateTime(int currentTimeS, int videoDurationS);
+typedef struct {
+    char* name;
+    char* signature;
+} JavaField;
 
-}
+jfieldID java_get_field(JNIEnv *env, char * class_name, JavaField field);
+jmethodID java_get_method(JNIEnv *env, jclass class, JavaMethod method);
+
+
+#endif /* HELPERS_H_ */

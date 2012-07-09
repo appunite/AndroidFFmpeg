@@ -1,30 +1,58 @@
 /*
  * queue.h
+ * Copyright (c) 2012 Jacek Marchwicki
  *
- *  Created on: Jun 11, 2012
- *      Author: Jacek Marchwicki (jacek.marchwicki@gmail.com)
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
  */
 
 #ifndef QUEUE_H_
 #define QUEUE_H_
+
+#include <pthread.h>
 
 typedef struct _Queue Queue;
 
 typedef void * (*queue_fill_func)(void * obj);
 typedef void (*queue_free_func)(void * obj, void *elem);
 
-Queue *queue_init(int size, queue_fill_func fill_func, queue_free_func free_func, void *obj);
+typedef enum {
+	QUEUE_CHECK_FUNC_RET_WAIT = -1,
+	QUEUE_CHECK_FUNC_RET_TEST = 0,
+	QUEUE_CHECK_FUNC_RET_SKIP = 1
+} QueueCheckFuncRet;
+
+typedef QueueCheckFuncRet (*QueueCheckFunc)(Queue *queue, void* check_data,
+		void *check_ret_data);
+
+Queue *queue_init_with_custom_lock(int size, queue_fill_func fill_func,
+		queue_free_func free_func, void *obj, pthread_mutex_t *custom_lock,
+		pthread_cond_t *custom_cond);
+//Queue *queue_init(int size, queue_fill_func fill_func, queue_free_func free_func, void *obj);
 void queue_free(Queue *queue);
 
-void *queue_push_start(Queue *queue, int *to_write);
+void *queue_push_start(Queue *queue, int *to_write, QueueCheckFunc func,
+		void *check_data, void *check_ret_data);
 void queue_push_finish(Queue *queue, int to_write);
 
-void *queue_pop_start(Queue *queue);
+void *queue_pop_start_already_locked(Queue *queue, QueueCheckFunc func,
+		void *check_data, void *check_ret_data);
+void *queue_pop_start(Queue *queue, QueueCheckFunc func, void *check_data,
+		void *check_ret_data);
 void queue_pop_finish(Queue *queue);
 
 int queue_get_size(Queue *queue);
 
 void queue_wait_for(Queue *queue, int size);
-
 
 #endif /* QUEUE_H_ */

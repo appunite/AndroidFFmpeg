@@ -1,3 +1,21 @@
+/*
+ * FFmpegView.java
+ * Copyright (c) 2012 Jacek Marchwicki
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 package com.appunite.ffmpeg;
 
 import android.content.Context;
@@ -43,13 +61,28 @@ public class FFmpegView extends View implements FFmpegDisplay {
 		this.mpegPlayer = mpegPlayer;
 		this.invalidate();
 	}
+	
+	@Override
+	protected void onAttachedToWindow() {
+		super.onAttachedToWindow();
+		
+		this.mpegPlayer.renderFrameStart();
+	}
+	
+	@Override
+	protected void onDetachedFromWindow() {
+		super.onDetachedFromWindow();
+		
+		this.mpegPlayer.renderFrameStop();
+	}
 
 	@Override
 	protected void onDraw(Canvas canvas) {
 		canvas.drawRGB(0, 0, 0);
 
-		RenderedFrame renderFrame = this.mpegPlayer.renderFrame();
-		if (renderFrame != null) {
+		RenderedFrame renderFrame;
+		try {
+			renderFrame = this.mpegPlayer.renderFrame();
 			canvas.save();
 			int width = this.getWidth();
 			int height = this.getHeight();
@@ -64,7 +97,9 @@ public class FFmpegView extends View implements FFmpegDisplay {
 			canvas.drawBitmap(renderFrame.bitmap, 0, 0, null);
 			this.mpegPlayer.releaseFrame();
 			canvas.restore();
+		} catch (InterruptedException e) {
 		}
+	
 
 		String fps = this.fpsCounter.tick();
 		canvas.drawText(fps, 40, 40, this.mPaint);

@@ -1,5 +1,5 @@
 /*
- * FFmpegListener.java
+ * jni=protocol.h
  * Copyright (c) 2012 Jacek Marchwicki
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,10 +16,9 @@
  *
  */
 
-package com.appunite.ffmpeg;
+#ifndef JNI_PROTOCOL_H
+#define JNI_PROTOCOL_H
 
-public interface FFmpegListener {
+void register_jni_protocol(JavaVM *jvm);
 
-	void onUpdateTime(int currentTimeS, int videoDurationS);
-
-}
+#endif /* H_JNI_PROTOCOL */

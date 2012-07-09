@@ -19,12 +19,13 @@
         android:smallScreens="true" >
     </supports-screens>
 
-    <application android:label="@string/app_name"
-        android:hardwareAccelerated="true" >
+    <application
+        android:hardwareAccelerated="true"
+        android:label="@string/app_name" >
         <activity
-            android:screenOrientation="landscape"
             android:name="MainActivity"
-            android:label="@string/app_name" >
+            android:label="@string/app_name"
+            android:screenOrientation="landscape" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

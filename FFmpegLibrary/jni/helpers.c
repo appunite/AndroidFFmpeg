@@ -1,5 +1,5 @@
 /*
- * FFmpegListener.java
+ * helpers.c
  * Copyright (c) 2012 Jacek Marchwicki
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,10 +16,15 @@
  *
  */
 
-package com.appunite.ffmpeg;
+#include <jni.h>
 
-public interface FFmpegListener {
+#include "helpers.h"
 
-	void onUpdateTime(int currentTimeS, int videoDurationS);
+jfieldID java_get_field(JNIEnv *env, char * class_name, JavaField field) {
+	jclass clazz = (*env)->FindClass(env, class_name);
+	return (*env)->GetFieldID(env, clazz, field.name, field.signature);
+}
 
+jmethodID java_get_method(JNIEnv *env, jclass class, JavaMethod method) {
+	return (*env)->GetMethodID(env, class, method.name, method.signature);
 }
