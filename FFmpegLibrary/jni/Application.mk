@@ -17,6 +17,6 @@
 #APP_ABI := all
 #APP_ABI := armeabi-v7a  armeabi x86
 APP_ABI  := x86
-#APP_ABI := armeabi-v7am
+#APP_ABI := armeabi-v7a
 APP_PLATFORM := android-9
 #APP_OPTIM := debug

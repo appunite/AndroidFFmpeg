@@ -35,7 +35,7 @@ static JavaMethod player_prepare_frame = {"prepareFrame", "(II)Landroid/graphics
 static JavaMethod audio_track_write = {"write", "([BII)I"};
 static JavaMethod audio_track_pause = {"pause", "()V"};
 static JavaMethod audio_track_play = {"play", "()V"};
-static JavaMethod audio_track_stop = {"stop", "()V"};
+static JavaMethod audio_track_flush = {"flush", "()V"};
 
 // Player
 

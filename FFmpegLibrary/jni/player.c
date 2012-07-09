@@ -105,11 +105,12 @@ struct VideoRGBFrameElem {
 struct Player {
 	JavaVM *get_javavm;
 
+	jclass player_class;
 	jclass audio_track_class;
 	jmethodID audio_track_write_method;
 	jmethodID audio_track_play_method;
 	jmethodID audio_track_pause_method;
-	jmethodID audio_track_stop_method;
+	jmethodID audio_track_flush_method;
 
 	jmethodID player_prepare_frame_method;
 	jmethodID player_on_update_time_method;
@@ -191,6 +192,7 @@ enum PlayerErrors {
 	ERROR_COULD_NOT_GET_JAVA_VM,
 	ERROR_COULD_NOT_DETACH_THREAD,
 	ERROR_COULD_NOT_ATTACH_THREAD,
+	ERROR_COULD_NOT_CREATE_GLOBAL_REF_FOR_AUDIO_TRACK_CLASS,
 
 	// AudioTrack
 	ERROR_NOT_FOUND_AUDIO_TRACK_CLASS,
@@ -508,14 +510,14 @@ void * player_read_from_stream(void *data) {
 
 	while (av_read_frame(player->input_format_ctx, pkt) >= 0) {
 		int stop;
-		LOGI(8,"Read frame");
+		LOGI(8, "Read frame");
 		pthread_mutex_lock(&player->mutex_queue);
 		stop = player->stop;
 		pthread_mutex_unlock(&player->mutex_queue);
 
 		LOGI(10, "wasdf");
 		if (stop) {
-			LOGI(4,"stopping player_read_from_stream");
+			LOGI(4, "stopping player_read_from_stream");
 			av_free_packet(pkt);
 			goto end;
 		} else if (packet.stream_index == player->input_video_stream_number) {
@@ -766,7 +768,9 @@ int player_stop_without_lock(struct State * state) {
 
 	// TODO do something with audio
 	(*state->env)->CallVoidMethod(state->env, player->audio_track,
-			player->audio_track_stop_method);
+			player->audio_track_pause_method);
+	(*state->env)->CallVoidMethod(state->env, player->audio_track,
+			player->audio_track_flush_method);
 
 	// TODO free queues
 
@@ -1256,6 +1260,7 @@ int jni_player_set_data_source(JNIEnv *env, jobject thiz, jstring string) {
 void jni_player_dealloc(JNIEnv *env, jobject thiz) {
 	struct Player *player = player_get_player_field(env, thiz);
 
+	(*env)->DeleteGlobalRef(env, player->audio_track_class);
 	free(player);
 }
 
@@ -1277,87 +1282,97 @@ int jni_player_init(JNIEnv *env, jobject thiz) {
 		goto free_player;
 	}
 
-	jclass player_class = (*env)->FindClass(env, player_class_path_name);
-	if (player_class == NULL) {
-		err = ERROR_NOT_FOUND_PLAYER_CLASS;
-		goto free_player;
+	{
+		jclass player_class = (*env)->FindClass(env, player_class_path_name);
+
+		if (player_class == NULL) {
+			err = ERROR_NOT_FOUND_PLAYER_CLASS;
+			goto free_player;
+		}
+
+		jfieldID player_m_native_player_field = java_get_field(env,
+				player_class_path_name, player_m_native_player);
+		if (player_m_native_player_field == NULL) {
+			err = ERROR_NOT_FOUND_M_NATIVE_PLAYER_FIELD;
+			goto free_player;
+		}
+
+		(*env)->SetIntField(env, thiz, player_m_native_player_field, (jint) player);
+
+		player->player_prepare_frame_method = java_get_method(env, player_class,
+				player_prepare_frame);
+		if (player->player_prepare_frame_method == NULL) {
+			err = ERROR_NOT_FOUND_PREPARE_FRAME_METHOD;
+			goto free_player;
+		}
+
+		player->player_on_update_time_method = java_get_method(env, player_class,
+				player_on_update_time);
+		if (player->player_on_update_time_method == NULL) {
+			err = ERROR_NOT_FOUND_ON_UPDATE_TIME_METHOD;
+			goto free_player;
+		}
+
+		player->player_prepare_audio_track_method = java_get_method(env,
+				player_class, player_prepare_audio_track);
+		if (player->player_prepare_audio_track_method == NULL) {
+			err = ERROR_NOT_FOUND_PREPARE_AUDIO_TRACK_METHOD;
+			goto free_player;
+		}
+
+		(*env)->DeleteLocalRef(env, player_class);
 	}
 
-	jfieldID player_m_native_player_field = java_get_field(env,
-			player_class_path_name, player_m_native_player);
-	if (player_m_native_player_field == NULL) {
-		err = ERROR_NOT_FOUND_M_NATIVE_PLAYER_FIELD;
-		goto free_player;
-	}
+	{
+		jclass audio_track_class = (*env)->FindClass(env,
+				android_track_class_path_name);
+		if (audio_track_class == NULL) {
+			err = ERROR_NOT_FOUND_AUDIO_TRACK_CLASS;
+			goto free_player;
+		}
 
-	(*env)->SetIntField(env, thiz, player_m_native_player_field, (jint) player);
-
-	player->player_prepare_frame_method = java_get_method(env, player_class,
-			player_prepare_frame);
-	if (player->player_prepare_frame_method == NULL) {
-		err = ERROR_NOT_FOUND_PREPARE_FRAME_METHOD;
-		goto free_player;
-	}
-
-	player->player_on_update_time_method = java_get_method(env, player_class,
-			player_on_update_time);
-	if (player->player_on_update_time_method == NULL) {
-		err = ERROR_NOT_FOUND_ON_UPDATE_TIME_METHOD;
-		goto free_player;
-	}
-
-	player->player_prepare_audio_track_method = java_get_method(env,
-			player_class, player_prepare_audio_track);
-	if (player->player_prepare_audio_track_method == NULL) {
-		err = ERROR_NOT_FOUND_PREPARE_AUDIO_TRACK_METHOD;
-		goto free_player;
-	}
-
-	player->audio_track_class = (*env)->FindClass(env,
-			android_track_class_path_name);
-	if (player->audio_track_class == NULL) {
-		err = ERROR_NOT_FOUND_AUDIO_TRACK_CLASS;
-		goto free_player;
+		player->audio_track_class = (*env)->NewGlobalRef(env,
+				audio_track_class);
+		if (player->audio_track_class == NULL) {
+			err = ERROR_COULD_NOT_CREATE_GLOBAL_REF_FOR_AUDIO_TRACK_CLASS;
+			(*env)->DeleteLocalRef(env, audio_track_class);
+			goto free_player;
+		}
+		(*env)->DeleteLocalRef(env, audio_track_class);
 	}
 
 	player->audio_track_write_method = java_get_method(env,
 			player->audio_track_class, audio_track_write);
 	if (player->audio_track_write_method == NULL) {
 		err = ERROR_NOT_FOUND_WRITE_METHOD;
-		goto free_player;
+		goto delete_audio_track_global_ref;
 	}
 
 	player->audio_track_play_method = java_get_method(env,
 			player->audio_track_class, audio_track_play);
 	if (player->audio_track_play_method == NULL) {
 		err = ERROR_NOT_FOUND_PLAY_METHOD;
-		goto free_player;
+		goto delete_audio_track_global_ref;
 	}
 
 	player->audio_track_pause_method = java_get_method(env,
 			player->audio_track_class, audio_track_pause);
 	if (player->audio_track_pause_method == NULL) {
 		err = ERROR_NOT_FOUND_PAUSE_METHOD;
-		goto free_player;
+		goto delete_audio_track_global_ref;
 	}
 
-	player->audio_track_stop_method = java_get_method(env,
-			player->audio_track_class, audio_track_stop);
-	if (player->audio_track_stop_method == NULL) {
+	player->audio_track_pause_method = java_get_method(env,
+			player->audio_track_class, audio_track_flush);
+	if (player->audio_track_pause_method == NULL) {
 		err = ERROR_NOT_FOUND_STOP_METHOD;
-		goto free_player;
+		goto delete_audio_track_global_ref;
 	}
 
 	pthread_mutex_init(&player->mutex_audio_clock, NULL);
 	pthread_mutex_init(&player->mutex_operation, NULL);
-
-//	pthread_mutexattr_t mutex_recursive;
-//	pthread_mutexattr_init(&mutex_recursive);
-//	pthread_mutexattr_settype(&mutex_recursive, PTHREAD_MUTEX_RECURSIVE);
-//	pthread_mutex_init(&player->mutex_queue, &mutex_recursive);
 	pthread_mutex_init(&player->mutex_queue, NULL);
 	pthread_cond_init(&player->cond_queue, NULL);
-//	pthread_mutexattr_destroy(&mutex_recursive);
 
 	player->playing = FALSE;
 	player->pause = FALSE;
@@ -1369,6 +1384,9 @@ int jni_player_init(JNIEnv *env, jobject thiz) {
 	player_print_all_codecs();
 
 	goto end;
+
+	delete_audio_track_global_ref:
+	(*env)->DeleteGlobalRef(env, player->audio_track_class);
 
 	free_player: free(player);
 
