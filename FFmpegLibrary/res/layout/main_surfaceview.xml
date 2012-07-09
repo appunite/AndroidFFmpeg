@@ -16,7 +16,7 @@
         android:layout_alignParentBottom="true"
         android:layout_alignParentLeft="true"
         android:background="#40ffffff"
-        android:visibility="visible" >
+        android:visibility="gone" >
 
         <Button
             android:id="@+id/play_pause"

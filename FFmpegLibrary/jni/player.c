@@ -632,6 +632,13 @@ int player_write_audio(struct Player *player, JNIEnv *env) {
 	LOGI(10, "playing audio track");
 	ret = (*env)->CallIntMethod(env, player->audio_track,
 			player->audio_track_write_method, samples_byte_array, 0, data_size);
+	jthrowable exc = (*env)->ExceptionOccurred(env);
+	if (exc) {
+		err = ERROR_PLAYING_AUDIO;
+		LOGE(3, "Could not write audio track: reason in exception");
+		// TODO maybe release exc
+		goto free_local_ref;
+	}
 	if (ret < 0) {
 		err = ERROR_PLAYING_AUDIO;
 		LOGE(3, "Could not write audio track: reason: %d look in AudioTrack.write()", ret);
@@ -698,6 +705,11 @@ void *player_fill_video_rgb_frame(struct State * state) {
 	jobject jbitmap = (*env)->CallObjectMethod(env, thiz,
 			player->player_prepare_frame_method, destWidth, destHeight);
 
+	jthrowable exc = (*env)->ExceptionOccurred(env);
+	if (exc) {
+		LOGE(1, "could not create jbitmap - exception occure");
+		goto free_frame;
+	}
 	if (jbitmap == NULL) {
 		LOGE(1, "could not create jbitmap");
 		goto free_frame;
@@ -775,6 +787,7 @@ int player_stop_without_lock(struct State * state) {
 	// TODO do something with audio
 	(*state->env)->CallVoidMethod(state->env, player->audio_track,
 			player->audio_track_pause_method);
+
 	(*state->env)->CallVoidMethod(state->env, player->audio_track,
 			player->audio_track_flush_method);
 
@@ -1049,6 +1062,12 @@ int player_set_data_source(struct State *state, const char *file_path) {
 			state->thiz, player->player_prepare_audio_track_method, sample_rate,
 			channels);
 
+
+	jthrowable exc = (*state->env)->ExceptionOccurred(state->env);
+	if (exc) {
+		err = ERROR_NOT_CREATED_AUDIO_TRACK;
+		goto close_audio_codec;
+	}
 	if (audio_track == NULL) {
 		err = ERROR_NOT_CREATED_AUDIO_TRACK;
 		goto close_audio_codec;
@@ -1067,7 +1086,7 @@ int player_set_data_source(struct State *state, const char *file_path) {
 					* av_q2d(player->input_video_stream->time_base));
 
 	player_update_time(state, 0.0);
-//	player->pause = TRUE;
+	player->pause = TRUE;
 
 	LOGI(3, "16");
 	pthread_mutex_lock(&player->mutex_queue);
@@ -1221,6 +1240,7 @@ void jni_player_pause(JNIEnv *env, jobject thiz) {
 	player->pause = TRUE;
 	(*env)->CallVoidMethod(env, player->audio_track,
 			player->audio_track_pause_method);
+	// just leave exception
 
 	pthread_cond_broadcast(&player->cond_queue);
 
@@ -1247,6 +1267,7 @@ void jni_player_resume(JNIEnv *env, jobject thiz) {
 	player->pause = FALSE;
 	(*env)->CallVoidMethod(env, player->audio_track,
 			player->audio_track_play_method);
+	// just leave exception
 
 	pthread_cond_broadcast(&player->cond_queue);
 

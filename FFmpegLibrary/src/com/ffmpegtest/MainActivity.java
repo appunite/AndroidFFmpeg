@@ -48,7 +48,7 @@ public class MainActivity extends Activity implements OnClickListener,
 
 	private FFmpegPlayer mpegPlayer;
 	private static boolean isSurfaceView = true;
-	protected boolean mPlay;
+	protected boolean mPlay = false;
 	private View controlsView;
 	private View loadingView;
 	private SeekBar seekBar;
@@ -187,7 +187,11 @@ public class MainActivity extends Activity implements OnClickListener,
 							}).show();
 			return;
 		}
-		this.mpegPlayer.resume();
+		playPauseButton.setBackgroundResource(android.R.drawable.ic_media_play);
+		playPauseButton.setEnabled(true);
+		this.controlsView.setVisibility(View.VISIBLE);
+		this.loadingView.setVisibility(View.GONE);
+		this.videoView.setVisibility(View.VISIBLE);
 	}
 	
 	private void displaySystemMenu(boolean visible) {
@@ -229,9 +233,6 @@ public class MainActivity extends Activity implements OnClickListener,
 
 	@Override
 	public void onFFResume(NotPlayingException result) {
-		this.controlsView.setVisibility(View.VISIBLE);
-		this.loadingView.setVisibility(View.GONE);
-		this.videoView.setVisibility(View.VISIBLE);
 		this.playPauseButton.setBackgroundResource(android.R.drawable.ic_media_pause);
 		this.playPauseButton.setEnabled(true);
 
