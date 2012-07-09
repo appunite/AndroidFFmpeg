@@ -6,26 +6,41 @@
     <com.appunite.ffmpeg.FFmpegSurfaceView
         android:id="@+id/video_view"
         android:layout_width="fill_parent"
-        android:layout_height="fill_parent" />
+        android:layout_height="fill_parent"
+        android:visibility="invisible" />
 
-    <ImageButton
-        android:id="@+id/play_pause"
+    <RelativeLayout
+        android:id="@+id/controls"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_alignParentLeft="true"
-        android:contentDescription="@null"
-        android:src="@android:drawable/ic_media_play" />
+        android:background="#40ffffff"
+        android:visibility="visible" >
+
+        <Button
+            android:id="@+id/play_pause"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@android:drawable/ic_media_play"
+            android:contentDescription="@null"
+            android:enabled="false" />
+
+        <SeekBar
+            android:id="@+id/seek_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:layout_toRightOf="@+id/play_pause" />
+    </RelativeLayout>
 
     <ProgressBar
-        android:id="@+id/progress"
-        style="?android:progressBarStyleHorizontal"
-        android:layout_width="fill_parent"
+        android:id="@+id/loading_view"
+        style="?android:attr/progressBarStyleLarge"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentRight="true"
-        android:layout_toRightOf="@+id/play_pause"
-        android:max="100"
-        android:progress="30" />
+        android:layout_centerHorizontal="true"
+        android:layout_centerVertical="true" />
 
 </RelativeLayout>

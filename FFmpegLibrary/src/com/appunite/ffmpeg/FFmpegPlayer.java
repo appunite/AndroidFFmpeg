@@ -23,13 +23,106 @@ import android.graphics.Bitmap;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
+import android.os.AsyncTask;
 
 public class FFmpegPlayer {
-	private FFmpegListener mpegListener;
-	private final RenderedFrame mRenderedFrame = new RenderedFrame();
+	private static class StopTask extends AsyncTask<Void, Void, Void> {
+		
+		private final FFmpegPlayer player;
+	
+		public StopTask(FFmpegPlayer player) {
+			this.player = player;
+		}
+	
+		@Override
+		protected Void doInBackground(Void... params) {
+				player.stopNative();
+				return null;
+		}
+		
+		@Override
+		protected void onPostExecute(Void result) {
+			if (player.mpegListener != null)
+				player.mpegListener.onFFStop();
+		}
+		
+	}
+	
+	private static class SetDataSourceTask extends AsyncTask<String, Void, FFmpegError> {
+		
+		private final FFmpegPlayer player;
+	
+		public SetDataSourceTask(FFmpegPlayer player) {
+			this.player = player;
+		}
+	
+		@Override
+		protected FFmpegError doInBackground(String... params) {
+				int err = player.setDataSourceNative(params[0]);
+				if (err > 0) 
+					return new FFmpegError(err);
+				return null;
+		}
+		
+		@Override
+		protected void onPostExecute(FFmpegError result) {
+			if (player.mpegListener != null)
+				player.mpegListener.onFFDataSourceLoaded(result);
+		}
+		
+	}
 
-	private int mNativePlayer;
-	private final Activity activity;
+	private static class PauseTask extends AsyncTask<Void, Void, NotPlayingException> {
+		
+		private final FFmpegPlayer player;
+	
+		public PauseTask(FFmpegPlayer player) {
+			this.player = player;
+		}
+	
+		@Override
+		protected NotPlayingException doInBackground(Void... params) {
+			try {
+				player.pauseNative();
+				return null;
+			} catch (NotPlayingException e) {
+				return e;
+			}
+		}
+		
+		@Override
+		protected void onPostExecute(NotPlayingException result) {
+			if (player.mpegListener != null)
+				player.mpegListener.onFFPause(result);
+		}
+		
+	}
+
+	private static class ResumeTask extends AsyncTask<Void, Void, NotPlayingException> {
+		
+		private final FFmpegPlayer player;
+	
+		public ResumeTask(FFmpegPlayer player) {
+			this.player = player;
+		}
+	
+		@Override
+		protected NotPlayingException doInBackground(Void... params) {
+			try {
+				player.resumeNative();
+				return null;
+			} catch (NotPlayingException e) {
+				return e;
+			}
+		}
+		
+		@Override
+		protected void onPostExecute(NotPlayingException result) {
+			if (player.mpegListener != null)
+				player.mpegListener.onFFResume(result);
+		}
+		
+	}
 
 	static {
 		NativeTester nativeTester = new NativeTester();
@@ -43,11 +136,17 @@ public class FFmpegPlayer {
 		System.loadLibrary("ffmpeg-jni");
 	}
 
+	private FFmpegListener mpegListener = null;
+	private final RenderedFrame mRenderedFrame = new RenderedFrame();
+
+	private int mNativePlayer;
+	private final Activity activity;
+
 	private Runnable updateTimeRunnable = new Runnable() {
 
 		@Override
 		public void run() {
-			mpegListener.onUpdateTime(mCurrentTimeS, mVideoDurationS);
+			getMpegListener().onFFUpdateTime(mCurrentTimeS, mVideoDurationS);
 		}
 
 	};
@@ -61,9 +160,8 @@ public class FFmpegPlayer {
 		public int width;
 	}
 
-	public FFmpegPlayer(FFmpegDisplay videoView, Activity activity, FFmpegListener mpegListener) {
+	public FFmpegPlayer(FFmpegDisplay videoView, Activity activity) {
 		this.activity = activity;
-		this.mpegListener = mpegListener;
 		int error = initNative();
 		if (error != 0)
 			throw new RuntimeException(String.format("Could not initialize player: %d", error));
@@ -90,30 +188,18 @@ public class FFmpegPlayer {
 	private native int getVideoDurationNative();
 	
 	public void stop() {
-//		new Thread() {
-//			public void run() {
-				stopNative();
-//			};
-//		}.start();
+		new StopTask(this).execute();
 	}
 	
 	private native void pauseNative() throws NotPlayingException;
 	private native void resumeNative() throws NotPlayingException;
 	
 	public void pause() {
-		try {
-			pauseNative();
-		} catch (NotPlayingException e) {
-			e.printStackTrace();
-		}
+		new PauseTask(this).execute();
 	}
 	
 	public void resume() {
-		try {
-			resumeNative();
-		} catch (NotPlayingException e) {
-			e.printStackTrace();
-		}
+		new ResumeTask(this).execute();
 	}
 
 	private Bitmap prepareFrame(int width, int height) {
@@ -171,17 +257,23 @@ public class FFmpegPlayer {
 	}
 
 	private void setVideoListener(FFmpegListener mpegListener) {
-		this.mpegListener = mpegListener;
+		this.setMpegListener(mpegListener);
 	}
 
-	public void setDataSource(String url) throws FFmpegError {
-		int err = this.setDataSourceNative(url);
-		if (err != 0)
-			throw new FFmpegError(err);
+	public void setDataSource(String url) {
+		new SetDataSourceTask(this).execute(url);
 	}
 
 	public RenderedFrame renderFrame() throws InterruptedException {
 		this.mRenderedFrame.bitmap = this.renderFrameNative();
 		return this.mRenderedFrame;
+	}
+
+	public FFmpegListener getMpegListener() {
+		return mpegListener;
+	}
+
+	public void setMpegListener(FFmpegListener mpegListener) {
+		this.mpegListener = mpegListener;
 	}
 }

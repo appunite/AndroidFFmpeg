@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <declare-styleable name="SeekerView">
+        <attr name="borderColor" format="color" />
+        <attr name="borderWidth" format="dimension" />
+        <attr name="borderPadding" format="dimension" />
+        <attr name="barColor" format="color" />
+        <attr name="barMinHeight" format="dimension" />
+        <attr name="barMinWidth" format="dimension" />
+        <attr name="maxValue" format="integer" />
+        <attr name="currentValue" format="integer" />
+    </declare-styleable>
+
+</resources>

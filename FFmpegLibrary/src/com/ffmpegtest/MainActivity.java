@@ -20,32 +20,40 @@ package com.ffmpegtest;
 
 import java.io.File;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
 import android.content.DialogInterface;
 import android.content.pm.ActivityInfo;
 import android.graphics.PixelFormat;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.Window;
 import android.view.WindowManager;
-import android.widget.ProgressBar;
+import android.widget.Button;
+import android.widget.SeekBar;
 
 import com.appunite.ffmpeg.FFmpegDisplay;
 import com.appunite.ffmpeg.FFmpegError;
 import com.appunite.ffmpeg.FFmpegListener;
 import com.appunite.ffmpeg.FFmpegPlayer;
+import com.appunite.ffmpeg.NotPlayingException;
 
 public class MainActivity extends Activity implements OnClickListener,
 		FFmpegListener {
 
 	private FFmpegPlayer mpegPlayer;
 	private static boolean isSurfaceView = true;
-	private ProgressBar progressBar;
 	protected boolean mPlay;
+	private View controlsView;
+	private View loadingView;
+	private SeekBar seekBar;
+	private View videoView;
+	private Button playPauseButton;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -67,14 +75,18 @@ public class MainActivity extends Activity implements OnClickListener,
 		else
 			this.setContentView(R.layout.main_view);
 
-		progressBar = (ProgressBar) this.findViewById(R.id.progress);
+		seekBar = (SeekBar) this.findViewById(R.id.seek_bar);
 
-		View playPauseView = this.findViewById(R.id.play_pause);
-		playPauseView.setOnClickListener(this);
+		playPauseButton = (Button) this.findViewById(R.id.play_pause);
+		playPauseButton.setOnClickListener(this);
+		
+		controlsView = this.findViewById(R.id.controls);
+		loadingView = this.findViewById(R.id.loading_view);
 
-		FFmpegDisplay videoView = (FFmpegDisplay) this
+		videoView = this
 				.findViewById(R.id.video_view);
-		this.mpegPlayer = new FFmpegPlayer(videoView, this, this);
+		this.mpegPlayer = new FFmpegPlayer( (FFmpegDisplay) videoView, this);
+		this.mpegPlayer.setMpegListener(this);
 		play();
 	}
 
@@ -91,83 +103,46 @@ public class MainActivity extends Activity implements OnClickListener,
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
-		this.mpegPlayer.stop();
+		this.mpegPlayer.setMpegListener(null);
+		stop();
 	}
 
 	private void play() {
-		Thread thread = new Thread(new Runnable() {
-
-			@Override
-			public void run() {
-				try {
-					boolean http = true;
-					boolean encrypted = false;
-					// String video = "trailer.mp4";
-					// String video = "sample.mp4";
-					// String video = "HungerGamesTrailer1200.mp4";
-					// String video = "HungerGamesTrailer1200.mp4.enc";
-					String video = "HungerGamesTrailer800.mp4";
-					// String video = "HungerGamesTrailer800.mp4.enc";
-					String host = "192.168.1.105";
-					String url;
-					String base;
-					if (encrypted) {
-						base = "inflight";
-					} else {
-						base = "vod";
-					}
-					if (http) {
-						url = String.format(
-								"http://%s:1935/%s/mp4:%s/playlist.m3u8", host,
-								base, video);
-					} else {
-						url = String.format("rtsp://%s:1935/%s/mp4:%s", host,
-								base, video);
-					}
-					// url =
-					// "http://devimages.apple.com.edgekey.net/resources/http-streaming/examples/bipbop_4x3/bipbop_4x3_variant.m3u8";
-					// // apple simple
-					// url =
-					// "https://devimages.apple.com.edgekey.net/resources/http-streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8";
-					// // apple advanced
-					File missionFile = new File(Environment.getExternalStorageDirectory(), "mission.mp4");
-					url = missionFile.getAbsolutePath();
-					
-					mpegPlayer.setDataSource(url);
-					mpegPlayer.resume();
-					mPlay = true;
-
-				} catch (final FFmpegError e) {
-					e.printStackTrace();
-					MainActivity.this.runOnUiThread(new Runnable() {
-
-						@Override
-						public void run() {
-
-							String format = getResources().getString(
-									R.string.main_could_not_open_stream);
-							String message = String.format(format,
-									e.getMessage());
-
-							Builder builder = new AlertDialog.Builder(
-									MainActivity.this);
-							builder.setTitle(R.string.app_name)
-									.setMessage(message)
-									.setOnCancelListener(
-											new DialogInterface.OnCancelListener() {
-
-												@Override
-												public void onCancel(
-														DialogInterface dialog) {
-													MainActivity.this.finish();
-												}
-											}).show();
-						}
-					});
-				}
-			}
-		});
-		thread.start();
+		boolean http = true;
+		boolean encrypted = false;
+		// String video = "trailer.mp4";
+		// String video = "sample.mp4";
+		// String video = "HungerGamesTrailer1200.mp4";
+		// String video = "HungerGamesTrailer1200.mp4.enc";
+		String video = "HungerGamesTrailer800.mp4";
+		// String video = "HungerGamesTrailer800.mp4.enc";
+		String host = "192.168.1.105";
+		String url;
+		String base;
+		if (encrypted) {
+			base = "inflight";
+		} else {
+			base = "vod";
+		}
+		if (http) {
+			url = String.format(
+					"http://%s:1935/%s/mp4:%s/playlist.m3u8", host,
+					base, video);
+		} else {
+			url = String.format("rtsp://%s:1935/%s/mp4:%s", host,
+					base, video);
+		}
+		// url =
+		// "http://devimages.apple.com.edgekey.net/resources/http-streaming/examples/bipbop_4x3/bipbop_4x3_variant.m3u8";
+		// // apple simple
+		// url =
+		// "https://devimages.apple.com.edgekey.net/resources/http-streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8";
+		// // apple advanced
+		File missionFile = new File(Environment.getExternalStorageDirectory(), "mission.mp4");
+		url = missionFile.getAbsolutePath();
+		
+		mpegPlayer.setDataSource(url);
+		
 	}
 
 	@Override
@@ -175,13 +150,7 @@ public class MainActivity extends Activity implements OnClickListener,
 		int viewId = v.getId();
 		switch (viewId) {
 		case R.id.play_pause:
-			if (mPlay == true) {
-				mpegPlayer.pause();
-				mPlay = false;
-			} else {
-				mpegPlayer.resume();
-				mPlay = true;
-			}
+			resumePause();
 			return;
 
 		default:
@@ -190,8 +159,102 @@ public class MainActivity extends Activity implements OnClickListener,
 	}
 
 	@Override
-	public void onUpdateTime(int currentTimeS, int videoDurationS) {
-		progressBar.setMax(videoDurationS);
-		progressBar.setProgress(currentTimeS);
+	public void onFFUpdateTime(int currentTimeS, int videoDurationS) {
+		seekBar.setMax(videoDurationS);
+		seekBar.setProgress(currentTimeS);
+	}
+
+	@Override
+	public void onFFDataSourceLoaded(FFmpegError err) {
+		if (err != null) {
+			String format = getResources().getString(
+					R.string.main_could_not_open_stream);
+			String message = String.format(format,
+					err.getMessage());
+
+			Builder builder = new AlertDialog.Builder(
+					MainActivity.this);
+			builder.setTitle(R.string.app_name)
+					.setMessage(message)
+					.setOnCancelListener(
+							new DialogInterface.OnCancelListener() {
+
+								@Override
+								public void onCancel(
+										DialogInterface dialog) {
+									MainActivity.this.finish();
+								}
+							}).show();
+			return;
+		}
+		this.mpegPlayer.resume();
+	}
+	
+	private void displaySystemMenu(boolean visible) {
+		if (Build.VERSION.SDK_INT >= 14) {
+			displaySystemMenu14(visible);
+		} else if (Build.VERSION.SDK_INT >= 11) {
+			displaySystemMenu11(visible);
+		}
+	}
+	
+	@TargetApi(11)
+	private void displaySystemMenu11(boolean visible) {
+		if (visible) {
+			this.videoView.setSystemUiVisibility(View.STATUS_BAR_VISIBLE);	
+		} else {
+			this.videoView.setSystemUiVisibility(View.STATUS_BAR_HIDDEN);			
+		}
+	}
+	
+	@TargetApi(14)
+	private void displaySystemMenu14(boolean visible) {
+		if (visible) {
+			this.videoView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
+		} else {
+			this.videoView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE);	
+		}
+	}
+	
+	public void resumePause() {
+		this.playPauseButton.setEnabled(false);
+		if (mPlay) {
+			mpegPlayer.pause();
+		} else {
+			mpegPlayer.resume();
+			displaySystemMenu(true);
+		}
+		mPlay = !mPlay;
+	}
+
+	@Override
+	public void onFFResume(NotPlayingException result) {
+		this.controlsView.setVisibility(View.VISIBLE);
+		this.loadingView.setVisibility(View.GONE);
+		this.videoView.setVisibility(View.VISIBLE);
+		this.playPauseButton.setBackgroundResource(android.R.drawable.ic_media_pause);
+		this.playPauseButton.setEnabled(true);
+
+		displaySystemMenu(false);
+		mPlay = true;
+	}
+
+	@Override
+	public void onFFPause(NotPlayingException err) {
+		this.playPauseButton.setBackgroundResource(android.R.drawable.ic_media_play);
+		this.playPauseButton.setEnabled(true);
+		mPlay = false;
+	}
+	
+	private void stop() {
+		this.controlsView.setVisibility(View.GONE);
+		this.loadingView.setVisibility(View.VISIBLE);
+		this.videoView.setVisibility(View.INVISIBLE);
+	}
+
+	@Override
+	public void onFFStop() {
+		// TODO Auto-generated method stub
+		
 	}
 }

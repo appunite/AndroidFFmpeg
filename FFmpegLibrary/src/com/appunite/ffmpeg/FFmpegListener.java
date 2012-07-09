@@ -19,7 +19,10 @@
 package com.appunite.ffmpeg;
 
 public interface FFmpegListener {
-
-	void onUpdateTime(int currentTimeS, int videoDurationS);
+	void onFFDataSourceLoaded(FFmpegError err);
+	void onFFResume(NotPlayingException result);
+	void onFFPause(NotPlayingException err);
+	void onFFStop();
+	void onFFUpdateTime(int currentTimeS, int videoDurationS);
 
 }
