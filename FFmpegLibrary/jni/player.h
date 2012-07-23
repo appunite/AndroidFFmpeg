@@ -36,11 +36,14 @@ static JavaMethod audio_track_write = {"write", "([BII)I"};
 static JavaMethod audio_track_pause = {"pause", "()V"};
 static JavaMethod audio_track_play = {"play", "()V"};
 static JavaMethod audio_track_flush = {"flush", "()V"};
+static JavaMethod audio_track_stop = {"stop", "()V"};
 
 // Player
 
 int jni_player_init(JNIEnv *env, jobject thiz);
 void jni_player_dealloc(JNIEnv *env, jobject thiz);
+
+void jni_player_seek(JNIEnv *env, jobject thiz, jint position);
 
 void jni_player_pause(JNIEnv *env, jobject thiz);
 void jni_player_resume(JNIEnv *env, jobject thiz);
@@ -59,6 +62,8 @@ static JNINativeMethod player_methods[] = {
 
 	{"initNative", "()I", (void*) jni_player_init},
 	{"deallocNative", "()V", (void*) jni_player_dealloc},
+
+	{"seekNative", "(I)V", (void*) jni_player_seek},
 
 	{"pauseNative", "()V", (void*) jni_player_pause},
 	{"resumeNative", "()V", (void*) jni_player_resume},

@@ -71,6 +71,32 @@ public class FFmpegPlayer {
 		}
 		
 	}
+	
+private static class SeekTask extends AsyncTask<Integer, Void, NotPlayingException> {
+		
+		private final FFmpegPlayer player;
+	
+		public SeekTask(FFmpegPlayer player) {
+			this.player = player;
+		}
+	
+		@Override
+		protected NotPlayingException doInBackground(Integer... params) {
+				try {
+					player.seekNative(params[0].intValue());
+				} catch (NotPlayingException e) {
+					return e;
+				}
+				return null;
+		}
+		
+		@Override
+		protected void onPostExecute(NotPlayingException result) {
+			if (player.mpegListener != null)
+				player.mpegListener.onFFSeeked(result);
+		}
+		
+	}
 
 	private static class PauseTask extends AsyncTask<Void, Void, NotPlayingException> {
 		
@@ -168,6 +194,7 @@ public class FFmpegPlayer {
 		videoView.setMpegPlayer(this);
 	}
 	
+
 	@Override
 	protected void finalize() throws Throwable {
 		deallocNative();
@@ -184,6 +211,7 @@ public class FFmpegPlayer {
 	public native void renderFrameStop();	
 	private native Bitmap renderFrameNative() throws InterruptedException;
 	public native void releaseFrame();
+	private native void seekNative(int position) throws NotPlayingException;
 
 	private native int getVideoDurationNative();
 	
@@ -196,6 +224,10 @@ public class FFmpegPlayer {
 	
 	public void pause() {
 		new PauseTask(this).execute();
+	}
+	
+	public void seek(int position) {
+		new SeekTask(this).execute(Integer.valueOf(position));
 	}
 	
 	public void resume() {

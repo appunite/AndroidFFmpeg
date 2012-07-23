@@ -36,6 +36,7 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.SeekBar;
+import android.widget.SeekBar.OnSeekBarChangeListener;
 
 import com.appunite.ffmpeg.FFmpegDisplay;
 import com.appunite.ffmpeg.FFmpegError;
@@ -44,7 +45,7 @@ import com.appunite.ffmpeg.FFmpegPlayer;
 import com.appunite.ffmpeg.NotPlayingException;
 
 public class MainActivity extends Activity implements OnClickListener,
-		FFmpegListener {
+		FFmpegListener, OnSeekBarChangeListener {
 
 	private FFmpegPlayer mpegPlayer;
 	private static boolean isSurfaceView = true;
@@ -54,6 +55,7 @@ public class MainActivity extends Activity implements OnClickListener,
 	private SeekBar seekBar;
 	private View videoView;
 	private Button playPauseButton;
+	private boolean mTracking = false;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -76,6 +78,7 @@ public class MainActivity extends Activity implements OnClickListener,
 			this.setContentView(R.layout.main_view);
 
 		seekBar = (SeekBar) this.findViewById(R.id.seek_bar);
+		seekBar.setOnSeekBarChangeListener(this);
 
 		playPauseButton = (Button) this.findViewById(R.id.play_pause);
 		playPauseButton.setOnClickListener(this);
@@ -160,8 +163,10 @@ public class MainActivity extends Activity implements OnClickListener,
 
 	@Override
 	public void onFFUpdateTime(int currentTimeS, int videoDurationS) {
-		seekBar.setMax(videoDurationS);
-		seekBar.setProgress(currentTimeS);
+		if (!mTracking) {
+			seekBar.setMax(videoDurationS);
+			seekBar.setProgress(currentTimeS);
+		}
 	}
 
 	@Override
@@ -255,7 +260,29 @@ public class MainActivity extends Activity implements OnClickListener,
 
 	@Override
 	public void onFFStop() {
-		// TODO Auto-generated method stub
-		
+	}
+
+	@Override
+	public void onFFSeeked(NotPlayingException result) {
+		if (result != null)
+			throw new RuntimeException(result);
+	}
+
+	@Override
+	public void onProgressChanged(SeekBar seekBar, int progress,
+			boolean fromUser) {
+		if (fromUser) {
+			mpegPlayer.seek(progress);
+		}
+	}
+
+	@Override
+	public void onStartTrackingTouch(SeekBar seekBar) {
+		mTracking = true;
+	}
+
+	@Override
+	public void onStopTrackingTouch(SeekBar seekBar) {
+		mTracking = false;
 	}
 }
