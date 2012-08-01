@@ -207,6 +207,7 @@ public class MainActivity extends Activity implements OnClickListener,
 		}
 	}
 	
+	@SuppressWarnings("deprecation")
 	@TargetApi(11)
 	private void displaySystemMenu11(boolean visible) {
 		if (visible) {
