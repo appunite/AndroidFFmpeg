@@ -33,7 +33,7 @@ public class FFmpegSurfaceView extends SurfaceView implements FFmpegDisplay,
 
 	private FFmpegPlayer mMpegPlayer = null;
 	private Object mMpegPlayerLock = new Object();
-	private TutorialThread mThread;
+	private TutorialThread mThread = null;
 	private Paint mPaint;
 	private FpsCounter fpsCounter;
 
@@ -49,7 +49,6 @@ public class FFmpegSurfaceView extends SurfaceView implements FFmpegDisplay,
 		super(context, attrs, defStyle);
 
 		getHolder().addCallback(this);
-		mThread = new TutorialThread(getHolder());
 
 		this.mPaint = new Paint();
 		this.mPaint.setTextSize(32);
@@ -144,6 +143,7 @@ public class FFmpegSurfaceView extends SurfaceView implements FFmpegDisplay,
 			int height) {
 		surfaceDestroyed(holder);
 		this.mMpegPlayer.renderFrameStart();
+		mThread = new TutorialThread(getHolder());
 		mThread.setRunning(true);
 		mThread.setSurfaceParams(width, height);
 		mThread.start();
@@ -157,9 +157,11 @@ public class FFmpegSurfaceView extends SurfaceView implements FFmpegDisplay,
 
 	@Override
 	public void surfaceDestroyed(SurfaceHolder holder) {
-		mThread.setRunning(false);
-		this.mMpegPlayer.renderFrameStop();
-		mThread.interrupt();
+		if (mThread != null) {
+			mThread.setRunning(false);
+			this.mMpegPlayer.renderFrameStop();
+			mThread.interrupt();
+		}
 	}
 
 }
