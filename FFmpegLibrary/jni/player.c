@@ -54,6 +54,7 @@
 #include "queue.h"
 #include "player.h"
 #include "jni-protocol.h"
+#include "aes-protocol.h"
 
 #define LOG_LEVEL 15
 #define LOG_TAG "player.c"
@@ -1095,7 +1096,7 @@ uint64_t player_find_layout_from_channels(int nb_channels) {
 	return 0;
 }
 
-int player_set_data_source(struct State *state, const char *file_path) {
+int player_set_data_source(struct State *state, const char *file_path, AVDictionary *dictionary) {
 	struct Player *player = state->player;
 	int err = ERROR_NO_ERROR;
 	int i;
@@ -1121,7 +1122,7 @@ int player_set_data_source(struct State *state, const char *file_path) {
 	// open stream/file
 	int ret;
 	if ((ret = avformat_open_input(&(player->input_format_ctx), file_path, NULL,
-			NULL)) < 0) {
+			&dictionary)) < 0) {
 		char errbuf[128];
 		const char *errbuf_ptr = errbuf;
 
@@ -1673,13 +1674,68 @@ void jni_player_resume(JNIEnv *env, jobject thiz) {
 	end: pthread_mutex_unlock(&player->mutex_operation);
 }
 
-int jni_player_set_data_source(JNIEnv *env, jobject thiz, jstring string) {
+void jni_player_read_dictionary(JNIEnv *env, AVDictionary **dictionary, jobject jdictionary) {
+	jclass map_class = (*env)->FindClass(env, map_class_path_name);
+	jclass set_class = (*env)->FindClass(env, set_class_path_name);
+	jclass iterator_class = (*env)->FindClass(env, iterator_class_path_name);
+
+	jmethodID map_key_set_method = java_get_method(env, map_class, map_key_set);
+	jmethodID map_get_method = java_get_method(env, map_class, map_get);
+
+	jmethodID set_iterator_method = java_get_method(env, set_class,
+			set_iterator);
+
+	jmethodID iterator_next_method = java_get_method(env, iterator_class,
+			iterator_next);
+	jmethodID iterator_has_next_method = java_get_method(env, iterator_class,
+			iterator_has_next);
+
+	jobject jkey_set = (*env)->CallObjectMethod(env, jdictionary,
+			map_key_set_method);
+	jobject jiterator = (*env)->CallObjectMethod(env, jkey_set,
+			set_iterator_method);
+
+	while ((*env)->CallBooleanMethod(env, jiterator, iterator_has_next_method)) {
+		jobject jkey = (*env)->CallObjectMethod(env, jiterator,
+				iterator_next_method);
+		jobject jvalue = (*env)->CallObjectMethod(env, jdictionary, map_get_method,
+				jkey);
+
+		const char *key = (*env)->GetStringUTFChars(env, jkey, NULL);
+		const char *value = (*env)->GetStringUTFChars(env, jvalue, NULL);
+
+		if (av_dict_set(dictionary, key, value, 0) < 0) {
+			LOGE(2, "player_set_data_source: could not set key");
+		}
+
+		(*env)->ReleaseStringUTFChars(env, jkey, key);
+		(*env)->ReleaseStringUTFChars(env, jvalue, value);
+		(*env)->DeleteLocalRef(env, jkey);
+		(*env)->DeleteLocalRef(env, jvalue);
+	}
+
+	(*env)->DeleteLocalRef(env, jiterator);
+	(*env)->DeleteLocalRef(env, jkey_set);
+
+	(*env)->DeleteLocalRef(env, map_class);
+	(*env)->DeleteLocalRef(env, set_class);
+	(*env)->DeleteLocalRef(env, iterator_class);
+}
+
+int jni_player_set_data_source(JNIEnv *env, jobject thiz, jstring string, jobject dictionary) {
+
+	AVDictionary *dict = NULL;
+	if (dictionary != NULL) {
+		jni_player_read_dictionary(env, &dict, dictionary);
+		(*env)->DeleteLocalRef(env, dictionary);
+	}
+
 
 	const char *file_path = (*env)->GetStringUTFChars(env, string, NULL);
 	struct Player * player = player_get_player_field(env, thiz);
 	struct State state = { player: player, env: env, thiz: thiz };
 
-	int ret = player_set_data_source(&state, file_path);
+	int ret = player_set_data_source(&state, file_path, dict);
 
 	(*env)->ReleaseStringUTFChars(env, string, file_path);
 	return ret;
@@ -1831,6 +1887,9 @@ int jni_player_init(JNIEnv *env, jobject thiz) {
 
 	av_register_all();
 	register_jni_protocol(player->get_javavm);
+#ifdef MODULE_ENCRYPT
+	register_aes_protocol();
+#endif
 
 	player_print_all_codecs();
 

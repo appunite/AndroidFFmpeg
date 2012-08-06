@@ -27,6 +27,18 @@ static char *interrupted_exception_class_path_name = "java/lang/InterruptedExcep
 static char *runtime_exception_class_path_name = "java/lang/RuntimeException";
 static char *not_playing_exception_class_path_name = "com/appunite/ffmpeg/NotPlayingException";
 
+
+static char *map_class_path_name = "java/util/Map";
+static JavaMethod map_key_set = {"keySet", "()Ljava/util/Set;"};
+static JavaMethod map_get = {"get", "(Ljava/lang/Object;)Ljava/lang/Object;"};
+
+static char *set_class_path_name = "java/util/Set";
+static JavaMethod set_iterator = {"iterator", "()Ljava/util/Iterator;"};
+
+static char *iterator_class_path_name = "java/util/Iterator";
+static JavaMethod iterator_next = {"next", "()Ljava/lang/Object;"};
+static JavaMethod iterator_has_next = {"hasNext", "()Z"};
+
 static const struct {
     const char *name;
     int         nb_channels;
@@ -69,7 +81,7 @@ void jni_player_seek(JNIEnv *env, jobject thiz, jint position);
 void jni_player_pause(JNIEnv *env, jobject thiz);
 void jni_player_resume(JNIEnv *env, jobject thiz);
 
-int jni_player_set_data_source (JNIEnv *env, jobject thiz, jstring string);
+int jni_player_set_data_source(JNIEnv *env, jobject thiz, jstring string, jobject dictionary);
 int jni_player_stop(JNIEnv *env, jobject thiz);
 
 void jni_player_render_frame_start(JNIEnv *env, jobject thiz);
@@ -89,7 +101,7 @@ static JNINativeMethod player_methods[] = {
 	{"pauseNative", "()V", (void*) jni_player_pause},
 	{"resumeNative", "()V", (void*) jni_player_resume},
 
-	{"setDataSourceNative", "(Ljava/lang/String;)I", (void*) jni_player_set_data_source},
+	{"setDataSourceNative", "(Ljava/lang/String;Ljava/util/Map;)I", (void*) jni_player_set_data_source},
 	{"stopNative", "()I", (void*) jni_player_stop},
 
 	{"renderFrameStart", "()V", (void*) jni_player_render_frame_start},

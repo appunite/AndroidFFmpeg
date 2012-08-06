@@ -18,6 +18,8 @@
 
 package com.appunite.ffmpeg;
 
+import java.util.Map;
+
 import android.app.Activity;
 import android.graphics.Bitmap;
 import android.media.AudioFormat;
@@ -48,7 +50,7 @@ public class FFmpegPlayer {
 		
 	}
 	
-	private static class SetDataSourceTask extends AsyncTask<String, Void, FFmpegError> {
+	private static class SetDataSourceTask extends AsyncTask<Object, Void, FFmpegError> {
 		
 		private final FFmpegPlayer player;
 	
@@ -57,11 +59,14 @@ public class FFmpegPlayer {
 		}
 	
 		@Override
-		protected FFmpegError doInBackground(String... params) {
-				int err = player.setDataSourceNative(params[0]);
-				if (err > 0) 
-					return new FFmpegError(err);
-				return null;
+		protected FFmpegError doInBackground(Object... params) {
+			String url = (String) params[0];
+			@SuppressWarnings("unchecked")
+			Map<String, String> map = (Map<String, String>) params[1];
+			int err = player.setDataSourceNative(url, map);
+			if (err > 0) 
+				return new FFmpegError(err);
+			return null;
 		}
 		
 		@Override
@@ -204,7 +209,7 @@ private static class SeekTask extends AsyncTask<Integer, Void, NotPlayingExcepti
 	private native int initNative();
 	private native void deallocNative();
 	
-	private native int setDataSourceNative(String url);
+	private native int setDataSourceNative(String url, Map<String, String> dictionary);
 	private native int stopNative();
 
 	public native void renderFrameStart();
@@ -300,7 +305,11 @@ private static class SeekTask extends AsyncTask<Integer, Void, NotPlayingExcepti
 	}
 
 	public void setDataSource(String url) {
-		new SetDataSourceTask(this).execute(url);
+		setDataSource(url, null);
+	}
+	
+	public void setDataSource(String url, Map<String, String> dictionary) {
+		new SetDataSourceTask(this).execute(url, dictionary);
 	}
 
 	public RenderedFrame renderFrame() throws InterruptedException {

@@ -22,9 +22,14 @@ FEATURE_NEON:=
 FEATURE_VFPV3:=
 LIBRARY_PROFILER:=
 LIBRARY_YUV2RGB:=
+MODULE_ENCRYPT:=
 
 
 #settings
+
+# add support for encryption
+MODULE_ENCRYPT:=yes
+
 #if armeabi-v7a
 ifeq ($(TARGET_ARCH_ABI), armeabi-v7a)
 	# add neon optimization code (only armeabi-v7a)
@@ -49,6 +54,10 @@ endif
 
 
 #includes
+ifdef MODULE_ENCRYPT
+	include $(LOCAL_PATH)/Android-tropicssl.mk
+endif
+
 ifdef LIBRARY_YUV2RGB
 	include $(LOCAL_PATH)/yuv2rgb/Android.mk
 endif
@@ -113,6 +122,13 @@ endif
 ifdef LIBRARY_YUV2RGB
 	LOCAL_CFLAGS += -DYUV2RGB
 	LOCAL_STATIC_LIBRARIES += yuv2rgb
+endif
+
+ifdef MODULE_ENCRYPT
+	LOCAL_CFLAGS += -DMODULE_ENCRYPT
+	LOCAL_SRC_FILES += aes-protocol.c
+	LOCAL_C_INCLUDES += $(LOCAL_PATH)/tropicssl/include
+	LOCAL_STATIC_LIBRARIES += tropicssl
 endif
 
 LOCAL_LDLIBS  := -llog -ljnigraphics -lz -lm -g $(LOCAL_PATH)/ffmpeg-build/$(TARGET_ARCH_ABI)/libffmpeg.so

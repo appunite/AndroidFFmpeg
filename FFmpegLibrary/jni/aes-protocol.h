@@ -1,5 +1,5 @@
 /*
- * jni-protocol.h
+ * aes-protocol.h
  * Copyright (c) 2012 Jacek Marchwicki
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,9 +16,10 @@
  *
  */
 
-#ifndef JNI_PROTOCOL_H
-#define JNI_PROTOCOL_H
+#ifndef AES_PROTOCOL_H
+#define AES_PROTOCOL_H
 
-void register_jni_protocol(JavaVM *jvm);
+void register_aes_protocol();
 
-#endif /* H_JNI_PROTOCOL */
+#endif /* H_AES_PROTOCOL */
+

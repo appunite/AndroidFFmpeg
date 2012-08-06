@@ -3,6 +3,10 @@ include $(CLEAR_VARS)
 
 LOCAL_CFLAGS :=  -std=c99
 #LOCAL_CFLAGS :=  -std=c99 -pedantic -v -c ';'
+
+#disable thumb
+LOCAL_ARM_MODE := arm
+LOCAL_CFLAGS := -O3
 	
 LOCAL_ALLOW_UNDEFINED_SYMBOLS=false
 LOCAL_MODULE := yuv2rgb

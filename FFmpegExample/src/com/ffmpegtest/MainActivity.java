@@ -19,6 +19,7 @@
 package com.ffmpegtest;
 
 import java.io.File;
+import java.util.HashMap;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
@@ -141,10 +142,22 @@ public class MainActivity extends Activity implements OnClickListener,
 		// url =
 		// "https://devimages.apple.com.edgekey.net/resources/http-streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8";
 		// // apple advanced
-		File missionFile = new File(Environment.getExternalStorageDirectory(), "mission.mp4");
-		url = missionFile.getAbsolutePath();
 		
-		mpegPlayer.setDataSource(url);
+//		File videoFile = new File(Environment.getExternalStorageDirectory(), "mission.mp4");
+//		url = "file://" + videoFile.getAbsolutePath();
+		
+//		File videoFile = new File(Environment.getExternalStorageDirectory(), "Movies/no.mkv");
+//		url = "file://" + videoFile.getAbsolutePath();
+		
+		
+		File videoFile = new File(Environment.getExternalStorageDirectory(), "encrypted.mp4");
+		url = "aes+file://" + videoFile.getAbsolutePath();
+		HashMap<String, String> dictionary = new HashMap<String, String>();
+		dictionary.put("aeskey", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+		
+		
+		
+		mpegPlayer.setDataSource(url, dictionary);
 		
 	}
 

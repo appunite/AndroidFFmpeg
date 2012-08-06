@@ -10,3 +10,6 @@
 [submodule "FFmpegLibrary/jni/x264"]
 	path = FFmpegLibrary/jni/x264
 	url = git://git.videolan.org/x264.git
+[submodule "FFmpegLibrary/jni/tropicssl"]
+	path = FFmpegLibrary/jni/tropicssl
+	url = ssh://review.appunite.com/tropicssl.git
