@@ -98,7 +98,8 @@ void player_print_codec_description(AVCodec *codec) {
 	default:
 		break;
 	}
-	LOGI(10, "player_print_codec_description id: %d codec: %s, type: %s", codec->id, codec->name, type);
+	LOGI(10,
+			"player_print_codec_description id: %d codec: %s, type: %s", codec->id, codec->name, type);
 }
 
 struct VideoRGBFrameElem {
@@ -152,7 +153,7 @@ struct Player {
 	struct SwrContext *swr_context;
 	DECLARE_ALIGNED(16,uint8_t,audio_buf2)[AVCODEC_MAX_AUDIO_FRAME_SIZE * 4];
 
-	int video_duration;
+	long video_duration;
 	int last_updated_time;
 
 	//	pthread_mutex_t ready_mutex;
@@ -186,7 +187,6 @@ struct Player {
 
 	int64_t audio_pause_time;
 	int64_t audio_resume_time;
-
 
 #ifdef YUV2RGB
 int dither;
@@ -290,8 +290,7 @@ void player_print_all_codecs() {
 }
 
 enum DecodeAudioCheckMsg {
-	DECODE_AUDIO_CHECK_MSG_STOP = 0,
-	DECODE_AUDIO_CHECK_MSG_FLUSH,
+	DECODE_AUDIO_CHECK_MSG_STOP = 0, DECODE_AUDIO_CHECK_MSG_FLUSH,
 };
 
 QueueCheckFuncRet player_decode_audio_queue_check_func(Queue *queue,
@@ -365,27 +364,30 @@ void * player_decode_audio(void * data) {
 			continue;
 		}
 
-
-		int original_data_size = av_samples_get_buffer_size(NULL, player->input_audio_codec_ctx->channels,
-					player->input_audio_frame->nb_samples, player->input_audio_codec_ctx->sample_fmt, 1);
+		int original_data_size = av_samples_get_buffer_size(NULL,
+				player->input_audio_codec_ctx->channels,
+				player->input_audio_frame->nb_samples,
+				player->input_audio_codec_ctx->sample_fmt, 1);
 		uint8_t *audio_buf;
 		int data_size;
 
 		if (player->swr_context != NULL) {
-			uint8_t *out[] = {player->audio_buf2};
+			uint8_t *out[] = { player->audio_buf2 };
 
 			int sample_per_buffer_divider = player->audio_track_channel_count
 					* av_get_bytes_per_sample(player->audio_track_format);
 
 			int len2 = swr_convert(player->swr_context, out,
 					sizeof(player->audio_buf2) / sample_per_buffer_divider,
-					player->input_audio_frame->data, player->input_audio_frame->nb_samples);
+					player->input_audio_frame->data,
+					player->input_audio_frame->nb_samples);
 			if (len2 < 0) {
 				LOGE(1, "Could not resample frame");
 				pthread_mutex_lock(&player->mutex_queue);
 				goto stop;
 			}
-			if (len2 == sizeof(player->audio_buf2) / sample_per_buffer_divider) {
+			if (len2
+					== sizeof(player->audio_buf2) / sample_per_buffer_divider) {
 				LOGI(1, "warning: audio buffer is probably too small\n");
 				swr_init(player->swr_context);
 			}
@@ -398,7 +400,8 @@ void * player_decode_audio(void * data) {
 
 		LOGI(10, "player_decode_audio Decoded audio frame\n");
 
-		if ((err = player_write_audio(player, env, pts, audio_buf, data_size, original_data_size))) {
+		if ((err = player_write_audio(player, env, pts, audio_buf, data_size,
+				original_data_size))) {
 			LOGE(1, "Could not write frame");
 			pthread_mutex_lock(&player->mutex_queue);
 			goto stop;
@@ -412,7 +415,8 @@ void * player_decode_audio(void * data) {
 		flush:
 		LOGI(2, "player_decode_audio flush");
 		AVPacket *to_free;
-		while ((to_free = queue_pop_start_already_locked_non_block(player->audio_packets)) != NULL) {
+		while ((to_free = queue_pop_start_already_locked_non_block(
+				player->audio_packets)) != NULL) {
 			av_free_packet(to_free);
 			queue_pop_finish_already_locked(player->audio_packets);
 		}
@@ -433,8 +437,7 @@ void * player_decode_audio(void * data) {
 			pthread_cond_broadcast(&player->cond_queue);
 			goto pop;
 		}
-		end_loop:
-			continue;
+		end_loop: continue;
 	}
 
 	detach_current_thread: ret = (*player->get_javavm)->DetachCurrentThread(
@@ -448,8 +451,7 @@ void * player_decode_audio(void * data) {
 }
 
 enum DecodeVideoCheckMsg {
-	DECODE_VIDEO_CHECK_MSG_STOP = 0,
-	DECODE_VIDEO_CHECK_MSG_FLUSH,
+	DECODE_VIDEO_CHECK_MSG_STOP = 0, DECODE_VIDEO_CHECK_MSG_FLUSH,
 };
 
 QueueCheckFuncRet player_decode_video_queue_check_func(Queue *queue,
@@ -501,7 +503,8 @@ void * player_decode_video(void *data) {
 			if (interrupt_ret == DECODE_VIDEO_CHECK_MSG_STOP) {
 				LOGI(2, "player_decode_video pop stop");
 				goto stop;
-			} if (interrupt_ret == DECODE_VIDEO_CHECK_MSG_FLUSH) {
+			}
+			if (interrupt_ret == DECODE_VIDEO_CHECK_MSG_FLUSH) {
 				LOGI(2, "player_decode_video pop flush");
 				goto flush;
 			} else {
@@ -535,7 +538,8 @@ void * player_decode_video(void *data) {
 		}
 		double time = (double) pts
 				* av_q2d(player->input_video_stream->time_base);
-		LOGI(10, "player_decode_video Decoded video frame: %f, time_base: %d", time, pts);
+		LOGI(10,
+				"player_decode_video Decoded video frame: %f, time_base: %d", time, pts);
 
 		AVCodecContext * pCodecCtx = player->input_video_codec_ctx;
 
@@ -545,7 +549,8 @@ void * player_decode_video(void *data) {
 		struct VideoRGBFrameElem * elem;
 
 		pthread_mutex_lock(&player->mutex_queue);
-		push: elem = queue_push_start_already_locked(player->rgb_video_frames, &to_write,
+		push: elem = queue_push_start_already_locked(player->rgb_video_frames,
+				&to_write,
 				(QueueCheckFunc) player_decode_video_queue_check_func, player,
 				(void **) &interrupt_ret);
 		if (elem == NULL) {
@@ -602,19 +607,23 @@ void * player_decode_video(void *data) {
 		flush:
 		LOGI(2, "player_decode_video flushing video_packets");
 		AVPacket * flush_to_free;
-		while ((flush_to_free = queue_pop_start_already_locked_non_block(player->video_packets)) != NULL) {
+		while ((flush_to_free = queue_pop_start_already_locked_non_block(
+				player->video_packets)) != NULL) {
 			av_free_packet(flush_to_free);
 			queue_pop_finish_already_locked(player->video_packets);
 		}
 
 		if (!player->rendering) {
-			LOGI(2, "player_decode_video not rendering flushing rgb_video_frames");
+			LOGI(2,
+					"player_decode_video not rendering flushing rgb_video_frames");
 			struct VideoRGBFrameElem *elem;
-			while ((elem = queue_pop_start_already_locked_non_block(player->rgb_video_frames)) != NULL) {
+			while ((elem = queue_pop_start_already_locked_non_block(
+					player->rgb_video_frames)) != NULL) {
 				queue_pop_finish_already_locked(player->rgb_video_frames);
 			}
 		} else {
-			LOGI(2, "player_decode_video rendering sending rgb_video_frames flush request");
+			LOGI(2,
+					"player_decode_video rendering sending rgb_video_frames flush request");
 			player->flush_video_play = TRUE;
 			pthread_cond_broadcast(&player->cond_queue);
 			LOGI(2, "player_decode_video waiting for rgb_video_frames flush");
@@ -622,7 +631,6 @@ void * player_decode_video(void *data) {
 				pthread_cond_wait(&player->cond_queue, &player->mutex_queue);
 		}
 		LOGI(2, "player_decode_video rgb_video_frames flushed");
-
 
 		player->flush_video_stream = FALSE;
 		pthread_cond_broadcast(&player->cond_queue);
@@ -632,19 +640,23 @@ void * player_decode_video(void *data) {
 		stop:
 		LOGI(2, "player_decode_video stopping");
 		AVPacket * stop_to_free;
-		while ((stop_to_free = queue_pop_start_already_locked_non_block(player->video_packets)) != NULL) {
+		while ((stop_to_free = queue_pop_start_already_locked_non_block(
+				player->video_packets)) != NULL) {
 			av_free_packet(stop_to_free);
 			queue_pop_finish_already_locked(player->video_packets);
 		}
 		LOGI(2, "player_decode_video flushed video_packets")
 		if (!player->rendering) {
-			LOGI(2, "player_decode_video not rendering: flushing rgb_video_frames");
+			LOGI(2,
+					"player_decode_video not rendering: flushing rgb_video_frames");
 			struct VideoRGBFrameElem *elem;
-			while ((elem = queue_pop_start_already_locked_non_block(player->rgb_video_frames)) != NULL) {
+			while ((elem = queue_pop_start_already_locked_non_block(
+					player->rgb_video_frames)) != NULL) {
 				queue_pop_finish_already_locked(player->rgb_video_frames);
 			}
 		} else {
-			LOGI(2, "player_decode_video rendering: waiting for rgb_video_frames flush");
+			LOGI(2,
+					"player_decode_video rendering: waiting for rgb_video_frames flush");
 			player->flush_video_play = TRUE;
 			pthread_cond_broadcast(&player->cond_queue);
 			while (player->flush_video_play)
@@ -675,8 +687,7 @@ void * player_decode_video(void *data) {
 }
 
 enum ReadFromStreamCheckMsg {
-	READ_FROM_STREAM_CHECK_MSG_STOP = 0,
-	READ_FROM_STREAM_CHECK_MSG_SEEK,
+	READ_FROM_STREAM_CHECK_MSG_STOP = 0, READ_FROM_STREAM_CHECK_MSG_SEEK,
 };
 
 QueueCheckFuncRet player_read_from_stream_check_func(Queue *queue,
@@ -700,8 +711,8 @@ void * player_read_from_stream(void *data) {
 	int64_t seek_target;
 	JNIEnv * env;
 	Queue *queue;
-	JavaVMAttachArgs thread_spec =
-			{ JNI_VERSION_1_4, "FFmpegReadFromStream", NULL };
+	JavaVMAttachArgs thread_spec = { JNI_VERSION_1_4, "FFmpegReadFromStream",
+			NULL };
 
 	jint ret = (*player->get_javavm)->AttachCurrentThread(player->get_javavm,
 			&env, &thread_spec);
@@ -725,8 +736,8 @@ void * player_read_from_stream(void *data) {
 			goto seek_loop;
 		}
 
-parse_frame:
-		if (packet.stream_index == player->input_video_stream_number) {
+		parse_frame: if (packet.stream_index
+				== player->input_video_stream_number) {
 			LOGI(10, "player_read_from_stream read video frame");
 			queue = player->video_packets;
 		} else if (packet.stream_index == player->input_audio_stream_number) {
@@ -747,8 +758,7 @@ parse_frame:
 
 		push_start:
 		LOGI(10, "player_read_from_stream waiting for queue");
-		new_packet = queue_push_start_already_locked(queue,
-				&to_write,
+		new_packet = queue_push_start_already_locked(queue, &to_write,
 				(QueueCheckFunc) player_read_from_stream_check_func, player,
 				(void **) &interrupt_ret);
 		if (new_packet == NULL) {
@@ -777,7 +787,7 @@ parse_frame:
 
 		goto end_loop;
 
-	exit_loop:
+		exit_loop:
 		LOGI(3, "player_read_from_stream stop");
 		av_free_packet(pkt);
 
@@ -793,13 +803,16 @@ parse_frame:
 
 		pthread_mutex_unlock(&player->mutex_queue);
 		goto detach_current_thread;
-	seek_loop:
-		seek_target = av_rescale_q(AV_TIME_BASE * (int64_t)player->seek_position, AV_TIME_BASE_Q, player->input_video_stream->time_base);
+		seek_loop: seek_target = av_rescale_q(
+				AV_TIME_BASE * (int64_t) player->seek_position, AV_TIME_BASE_Q,
+				player->input_video_stream->time_base);
 		//double time = (double) pts
 		//				* av_q2d(player->input_video_stream->time_base);
 		//seek_target = av_rescale(player->seek_position * AV_TIME_BASE, player->input_video_stream->time_base.den, AV_TIME_BASE * (int64_t)player->input_video_stream->time_base.num);
-		LOGI(3,"player_read_from_stream seeking to: %ds, time_base: %d", player->seek_position, seek_target);
-		if(av_seek_frame(player->input_format_ctx, player->input_video_stream_number, seek_target, 0) < 0) {
+		LOGI(3,
+				"player_read_from_stream seeking to: %ds, time_base: %d", player->seek_position, seek_target);
+		if (av_seek_frame(player->input_format_ctx,
+				player->input_video_stream_number, seek_target, 0) < 0) {
 			LOGE(1, "Error while seeking");
 
 			player->seek_position = DO_NOT_SEEK;
@@ -812,7 +825,7 @@ parse_frame:
 
 		LOGI(3, "player_read_from_stream flushing audio")
 		(*env)->CallVoidMethod(env, player->audio_track,
-					player->audio_track_flush_method);
+				player->audio_track_flush_method);
 		LOGI(3, "player_read_from_stream flushed audio");
 
 		pthread_cond_broadcast(&player->cond_queue);
@@ -828,12 +841,10 @@ parse_frame:
 		player->seek_position = DO_NOT_SEEK;
 		pthread_cond_broadcast(&player->cond_queue);
 		LOGI(3, "player_read_from_stream ending seek");
-	skip_loop:
-		av_free_packet(pkt);
+		skip_loop: av_free_packet(pkt);
 		pthread_mutex_unlock(&player->mutex_queue);
 
-	end_loop:
-		continue;
+		end_loop: continue;
 	}
 
 	detach_current_thread: ret = (*player->get_javavm)->DetachCurrentThread(
@@ -847,7 +858,8 @@ parse_frame:
 	return NULL;
 }
 
-int player_write_audio(struct Player *player, JNIEnv *env, int64_t pts, uint8_t *data, int data_size, int original_data_size) {
+int player_write_audio(struct Player *player, JNIEnv *env, int64_t pts,
+		uint8_t *data, int data_size, int original_data_size) {
 	int err = ERROR_NO_ERROR;
 	int ret;
 	LOGI(10, "player_write_audio Writing audio frame")
@@ -892,13 +904,13 @@ int player_write_audio(struct Player *player, JNIEnv *env, int64_t pts, uint8_t 
 	}
 	if (ret < 0) {
 		err = ERROR_PLAYING_AUDIO;
-		LOGE(3, "Could not write audio track: reason: %d look in AudioTrack.write()", ret);
+		LOGE(3,
+				"Could not write audio track: reason: %d look in AudioTrack.write()", ret);
 		goto free_local_ref;
 	}
 
 	LOGI(10, "player_write_audio releasing local ref");
-	free_local_ref:
-	(*env)->DeleteLocalRef(env, samples_byte_array);
+	free_local_ref: (*env)->DeleteLocalRef(env, samples_byte_array);
 
 	end: return err;
 }
@@ -939,7 +951,8 @@ void *player_fill_video_rgb_frame(struct State * state) {
 	struct VideoRGBFrameElem * elem = malloc(sizeof(struct VideoRGBFrameElem));
 
 	if (elem == NULL) {
-		LOGE(1, "player_fill_video_rgb_frame could no allocate VideoRGBFrameEelem");
+		LOGE(1,
+				"player_fill_video_rgb_frame could no allocate VideoRGBFrameEelem");
 		goto error;
 	}
 
@@ -952,13 +965,15 @@ void *player_fill_video_rgb_frame(struct State * state) {
 	int destWidth = player->input_video_codec_ctx->width;
 	int destHeight = player->input_video_codec_ctx->height;
 
-	LOGI(3, "player_fill_video_rgb_frame prepareFrame(%d, %d)", destWidth, destHeight);
+	LOGI(3,
+			"player_fill_video_rgb_frame prepareFrame(%d, %d)", destWidth, destHeight);
 	jobject jbitmap = (*env)->CallObjectMethod(env, thiz,
 			player->player_prepare_frame_method, destWidth, destHeight);
 
 	jthrowable exc = (*env)->ExceptionOccurred(env);
 	if (exc) {
-		LOGE(1, "player_fill_video_rgb_frame could not create jbitmap - exception occure");
+		LOGE(1,
+				"player_fill_video_rgb_frame could not create jbitmap - exception occure");
 		goto free_frame;
 	}
 	if (jbitmap == NULL) {
@@ -1130,7 +1145,8 @@ int player_set_data_source(struct State *state, const char *file_path) {
 	// print video informations
 	av_dump_format(player->input_format_ctx, 0, file_path, FALSE);
 	if (LOG_LEVEL >= 3) {
-		LOGI(3, "player_set_data_source Number of streams: %d", player->input_format_ctx->nb_streams);
+		LOGI(3,
+				"player_set_data_source Number of streams: %d", player->input_format_ctx->nb_streams);
 		for (i = 0; i < player->input_format_ctx->nb_streams; i++) {
 			AVStream *stream = player->input_format_ctx->streams[i];
 			AVCodecContext *codec = stream->codec;
@@ -1250,7 +1266,8 @@ int player_set_data_source(struct State *state, const char *file_path) {
 
 	// print video informations
 	if (LOG_LEVEL >= 3) {
-		LOGI(3, "player_set_data_source Number of streams: %d", player->input_format_ctx->nb_streams);
+		LOGI(3,
+				"player_set_data_source Number of streams: %d", player->input_format_ctx->nb_streams);
 		for (i = 0; i < player->input_format_ctx->nb_streams; i++) {
 			AVStream *stream = player->input_format_ctx->streams[i];
 			AVCodecContext *codec = stream->codec;
@@ -1323,7 +1340,6 @@ int player_set_data_source(struct State *state, const char *file_path) {
 			state->thiz, player->player_prepare_audio_track_method, sample_rate,
 			channels);
 
-
 	jthrowable exc = (*state->env)->ExceptionOccurred(state->env);
 	if (exc) {
 		err = ERROR_NOT_CREATED_AUDIO_TRACK;
@@ -1344,11 +1360,12 @@ int player_set_data_source(struct State *state, const char *file_path) {
 
 	player->audio_track_channel_count = (*state->env)->CallIntMethod(state->env,
 			player->audio_track, player->audio_track_get_channel_count_method);
-	int audio_track_sample_rate= (*state->env)->CallIntMethod(state->env,
+	int audio_track_sample_rate = (*state->env)->CallIntMethod(state->env,
 			player->audio_track, player->audio_track_get_sample_rate_method);
 	player->audio_track_format = AV_SAMPLE_FMT_S16;
 
-	int64_t audio_track_layout = player_find_layout_from_channels(player->audio_track_channel_count);
+	int64_t audio_track_layout = player_find_layout_from_channels(
+			player->audio_track_channel_count);
 
 	int64_t dec_channel_layout =
 			(player->input_audio_codec_ctx->channel_layout
@@ -1356,43 +1373,74 @@ int player_set_data_source(struct State *state, const char *file_path) {
 							== av_get_channel_layout_nb_channels(
 									player->input_audio_codec_ctx->channel_layout)) ?
 					player->input_audio_codec_ctx->channel_layout :
-					av_get_default_channel_layout(player->input_audio_codec_ctx->channels);
+					av_get_default_channel_layout(
+							player->input_audio_codec_ctx->channels);
 
 	player->swr_context = NULL;
-	if (player->input_audio_codec_ctx->sample_fmt != player->audio_track_format ||
-	                dec_channel_layout != audio_track_layout ||
-	                player->input_audio_codec_ctx->sample_rate != audio_track_sample_rate) {
+	if (player->input_audio_codec_ctx->sample_fmt != player->audio_track_format
+			|| dec_channel_layout != audio_track_layout
+			|| player->input_audio_codec_ctx->sample_rate
+					!= audio_track_sample_rate) {
 
-		LOGI(3, "player_set_data_sourcd preparing conversion of %d Hz %s %d channels to %d Hz %s %d channels",
-							player->input_audio_codec_ctx->sample_rate,
-						av_get_sample_fmt_name(player->input_audio_codec_ctx->sample_fmt),
-						player->input_audio_codec_ctx->channels,
-						audio_track_sample_rate,
-						av_get_sample_fmt_name(player->audio_track_format),
-						player->audio_track_channel_count);
-
-		player->swr_context = swr_alloc_set_opts(NULL, audio_track_layout,
-				player->audio_track_format, audio_track_sample_rate, dec_channel_layout,
-				player->input_audio_codec_ctx->sample_fmt,
-				player->input_audio_codec_ctx->sample_rate, 0, NULL);
-
-		if (!player->swr_context || swr_init(player->swr_context) < 0) {
-			LOGE(1, "Cannot create sample rate converter for conversion of %d Hz %s %d channels to %d Hz %s %d channels!",
-					player->input_audio_codec_ctx->sample_rate,
+		LOGI(3,
+				"player_set_data_sourcd preparing conversion of %d Hz %s %d channels to %d Hz %s %d channels",
+				player->input_audio_codec_ctx->sample_rate,
 				av_get_sample_fmt_name(player->input_audio_codec_ctx->sample_fmt),
 				player->input_audio_codec_ctx->channels,
 				audio_track_sample_rate,
 				av_get_sample_fmt_name(player->audio_track_format),
 				player->audio_track_channel_count);
+
+		player->swr_context = swr_alloc_set_opts(NULL, audio_track_layout,
+				player->audio_track_format, audio_track_sample_rate,
+				dec_channel_layout, player->input_audio_codec_ctx->sample_fmt,
+				player->input_audio_codec_ctx->sample_rate, 0, NULL);
+
+		if (!player->swr_context || swr_init(player->swr_context) < 0) {
+			LOGE(1,
+					"Cannot create sample rate converter for conversion of %d Hz %s %d channels to %d Hz %s %d channels!",
+					player->input_audio_codec_ctx->sample_rate,
+					av_get_sample_fmt_name(player->input_audio_codec_ctx->sample_fmt),
+					player->input_audio_codec_ctx->channels,
+					audio_track_sample_rate,
+					av_get_sample_fmt_name(player->audio_track_format),
+					player->audio_track_channel_count);
 			err = ERROR_COULD_NOT_INIT_SWR_CONTEXT;
 			goto free_audio_track_ref;
 		}
 	}
 
 	player->last_updated_time = -1;
-	player->video_duration = round(
-			player->input_video_stream->duration
-					* av_q2d(player->input_video_stream->time_base));
+	player->video_duration = 0;
+	if (player->input_video_stream->duration > 0) {
+		player->video_duration = round(
+				player->input_video_stream->duration
+						* av_q2d(player->input_video_stream->time_base));
+		LOGI(3,
+				"player_set_data_source video stream duration: %ld", player->input_video_stream->duration)
+	} else if (player->input_audio_stream->duration > 0) {
+		player->video_duration = round(
+				player->input_audio_stream->duration
+						* av_q2d(player->input_audio_stream->time_base));
+		LOGI(3,
+				"player_set_data_source audio stream duration: %ld", player->input_audio_stream->duration)
+	} else if (player->input_format_ctx->duration > 0) {
+		player->video_duration = round(
+				player->input_format_ctx->duration * av_q2d(AV_TIME_BASE_Q));
+		LOGI(3,
+				"player_set_data_source video duration: %ld", player->input_format_ctx->duration)
+	} else {
+		for (i = 0; i < player->input_format_ctx->nb_streams; i++) {
+			AVStream *stream = player->input_format_ctx->streams[i];
+			if (stream->duration > 0) {
+				player->video_duration = round(
+						stream->duration * av_q2d(stream->time_base));
+				LOGI(3,
+						"player_set_data_source stream[%d] duration: %ld", i, player->input_video_stream->duration)
+				break;
+			}
+		}
+	}
 
 	player_update_time(state, 0.0);
 	player->pause = TRUE;
@@ -1475,8 +1523,7 @@ int player_set_data_source(struct State *state, const char *file_path) {
 		}
 	}
 
-	free_swr_context:
-	if (player->swr_context != NULL) {
+	free_swr_context: if (player->swr_context != NULL) {
 		swr_free(&player->swr_context);
 	}
 
@@ -1555,11 +1602,10 @@ void jni_player_seek(JNIEnv *env, jobject thiz, jint position) {
 	player->seek_position = position;
 	pthread_cond_broadcast(&player->cond_queue);
 
-	while(player->seek_position != DO_NOT_SEEK)
+	while (player->seek_position != DO_NOT_SEEK)
 		pthread_cond_wait(&player->cond_queue, &player->mutex_queue);
 	pthread_mutex_unlock(&player->mutex_queue);
-	end:
-	pthread_mutex_unlock(&player->mutex_operation);
+	end: pthread_mutex_unlock(&player->mutex_operation);
 }
 
 void jni_player_pause(JNIEnv *env, jobject thiz) {
@@ -1616,7 +1662,8 @@ void jni_player_resume(JNIEnv *env, jobject thiz) {
 	if (player->audio_write_time < player->audio_pause_time) {
 		player->audio_write_time = player->audio_resume_time;
 	} else if (player->audio_write_time < player->audio_resume_time) {
-		player->audio_write_time += player->audio_resume_time - player->audio_pause_time;
+		player->audio_write_time += player->audio_resume_time
+				- player->audio_pause_time;
 	}
 
 	pthread_cond_broadcast(&player->cond_queue);
@@ -1679,7 +1726,8 @@ int jni_player_init(JNIEnv *env, jobject thiz) {
 			goto free_player;
 		}
 
-		(*env)->SetIntField(env, thiz, player_m_native_player_field, (jint) player);
+		(*env)->SetIntField(env, thiz, player_m_native_player_field,
+				(jint) player);
 
 		player->player_prepare_frame_method = java_get_method(env, player_class,
 				player_prepare_frame);
@@ -1688,8 +1736,8 @@ int jni_player_init(JNIEnv *env, jobject thiz) {
 			goto free_player;
 		}
 
-		player->player_on_update_time_method = java_get_method(env, player_class,
-				player_on_update_time);
+		player->player_on_update_time_method = java_get_method(env,
+				player_class, player_on_update_time);
 		if (player->player_on_update_time_method == NULL) {
 			err = ERROR_NOT_FOUND_ON_UPDATE_TIME_METHOD;
 			goto free_player;
@@ -1765,12 +1813,12 @@ int jni_player_init(JNIEnv *env, jobject thiz) {
 		goto delete_audio_track_global_ref;
 	}
 
-	player->audio_track_get_sample_rate_method = java_get_method(env, player->audio_track_class, audio_track_get_sample_rate);
+	player->audio_track_get_sample_rate_method = java_get_method(env,
+			player->audio_track_class, audio_track_get_sample_rate);
 	if (player->audio_track_get_sample_rate_method == NULL) {
 		err = ERROR_NOT_FOUND_GET_SAMPLE_RATE_METHOD;
 		goto delete_audio_track_global_ref;
 	}
-
 
 	pthread_mutex_init(&player->mutex_operation, NULL);
 	pthread_mutex_init(&player->mutex_queue, NULL);
@@ -1788,8 +1836,8 @@ int jni_player_init(JNIEnv *env, jobject thiz) {
 
 	goto end;
 
-	delete_audio_track_global_ref:
-	(*env)->DeleteGlobalRef(env, player->audio_track_class);
+	delete_audio_track_global_ref: (*env)->DeleteGlobalRef(env,
+			player->audio_track_class);
 
 	free_player: free(player);
 
@@ -1797,8 +1845,7 @@ int jni_player_init(JNIEnv *env, jobject thiz) {
 }
 
 enum RenderCheckMsg {
-	RENDER_CHECK_MSG_INTERRUPT = 0,
-	RENDER_CHECK_MSG_FLUSH,
+	RENDER_CHECK_MSG_INTERRUPT = 0, RENDER_CHECK_MSG_FLUSH,
 };
 
 QueueCheckFuncRet player_render_frame_check_func(Queue *queue,
@@ -1867,21 +1914,21 @@ jobject jni_player_render_frame(JNIEnv *env, jobject thiz) {
 			skip = TRUE;
 		} else {
 			QueueCheckFuncRet ret;
-			test:
-			ret = player_render_frame_check_func(player->rgb_video_frames, player, &interrupt_ret);
+			test: ret = player_render_frame_check_func(player->rgb_video_frames,
+					player, &interrupt_ret);
 			switch (ret) {
-				case QUEUE_CHECK_FUNC_RET_WAIT:
-					pthread_cond_wait(&player->cond_queue, &player->mutex_queue);
-					goto test;
-				case QUEUE_CHECK_FUNC_RET_SKIP:
-					skip = TRUE;
-					queue_pop_finish_already_locked(player->rgb_video_frames);
-					break;
-				case QUEUE_CHECK_FUNC_RET_TEST:
-					break;
-				default:
-					assert(FALSE);
-					break;
+			case QUEUE_CHECK_FUNC_RET_WAIT:
+				pthread_cond_wait(&player->cond_queue, &player->mutex_queue);
+				goto test;
+			case QUEUE_CHECK_FUNC_RET_SKIP:
+				skip = TRUE;
+				queue_pop_finish_already_locked(player->rgb_video_frames);
+				break;
+			case QUEUE_CHECK_FUNC_RET_TEST:
+				break;
+			default:
+				assert(FALSE);
+				break;
 			}
 		}
 		if (skip) {
@@ -1895,7 +1942,8 @@ jobject jni_player_render_frame(JNIEnv *env, jobject thiz) {
 			} else if (interrupt_ret == RENDER_CHECK_MSG_FLUSH) {
 				LOGI(2, "jni_player_render_frame flush");
 				struct VideoRGBFrameElem *elem;
-				while ((elem = queue_pop_start_already_locked_non_block(player->rgb_video_frames)) != NULL) {
+				while ((elem = queue_pop_start_already_locked_non_block(
+						player->rgb_video_frames)) != NULL) {
 					queue_pop_finish_already_locked(player->rgb_video_frames);
 				}
 				LOGI(2, "jni_player_render_frame flushed");
@@ -1910,11 +1958,11 @@ jobject jni_player_render_frame(JNIEnv *env, jobject thiz) {
 		int64_t current_time = av_gettime();
 		int64_t time_diff = current_time - player->audio_write_time;
 		double pts_time_diff_d = elem->time - player->audio_clock;
-		int64_t sleep_time = (int64_t)(pts_time_diff_d * 1000.0) - (int64_t)(time_diff / 1000L);
+		int64_t sleep_time = (int64_t) (pts_time_diff_d * 1000.0)
+				- (int64_t) (time_diff / 1000L);
 
-
-		LOGI(9, "jni_player_render_frame current_time: %lld, write_time: %lld, time_diff: %lld, elem->time: %f, player->audio_clock: %f",
-				current_time, player->audio_write_time, time_diff, elem->time, player->audio_clock);
+		LOGI(9,
+				"jni_player_render_frame current_time: %lld, write_time: %lld, time_diff: %lld, elem->time: %f, player->audio_clock: %f", current_time, player->audio_write_time, time_diff, elem->time, player->audio_clock);
 
 		LOGI(9, "jni_player_render_frame sleep_time: %ld", sleep_time);
 		if (sleep_time <= MIN_SLEEP_TIME_MS) {
@@ -1925,7 +1973,8 @@ jobject jni_player_render_frame(JNIEnv *env, jobject thiz) {
 			sleep_time = 1000;
 		}
 
-		int ret = pthread_cond_timeout_np(&player->cond_queue, &player->mutex_queue, sleep_time);
+		int ret = pthread_cond_timeout_np(&player->cond_queue,
+				&player->mutex_queue, sleep_time);
 		if (ret == ETIMEDOUT) {
 			LOGI(9, "jni_player_render_frame timeout");
 			break;
