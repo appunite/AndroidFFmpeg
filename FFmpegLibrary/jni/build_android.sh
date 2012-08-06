@@ -155,10 +155,12 @@ function build_one
 	    --enable-demuxer=rtsp \
 	    --enable-demuxer=rtp \
 	    --enable-demuxer=hls \
+	    --enable-demuxer=matroska \
 	    --enable-muxer=rtsp \
 	    --enable-muxer=mp4 \
 	    --enable-muxer=mov \
 	    --enable-muxer=mjpeg \
+	    --enable-muxer=matroska \
 	    --enable-protocol=crypto \
 	    --enable-protocol=jni \
 	    --enable-protocol=file \
