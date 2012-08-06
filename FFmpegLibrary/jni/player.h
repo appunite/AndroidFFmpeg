@@ -19,11 +19,29 @@
 #ifndef H_PLAYER
 #define H_PLAYER
 
+#include <libavutil/audioconvert.h>
+
 static char *player_class_path_name = "com/appunite/ffmpeg/FFmpegPlayer";
 static char *android_track_class_path_name = "android/media/AudioTrack";
 static char *interrupted_exception_class_path_name = "java/lang/InterruptedException";
 static char *runtime_exception_class_path_name = "java/lang/RuntimeException";
 static char *not_playing_exception_class_path_name = "com/appunite/ffmpeg/NotPlayingException";
+
+static const struct {
+    const char *name;
+    int         nb_channels;
+    uint64_t     layout;
+} channel_android_layout_map[] = {
+    { "mono",        1,  AV_CH_LAYOUT_MONO },
+    { "stereo",      2,  AV_CH_LAYOUT_STEREO },
+    { "2.1",         3,  AV_CH_LAYOUT_2POINT1 },
+    { "4.0",         4,  AV_CH_LAYOUT_4POINT0 },
+    { "4.1",         5,  AV_CH_LAYOUT_4POINT1 },
+    { "5.1",         6,  AV_CH_LAYOUT_5POINT1_BACK },
+    { "6.0",         6,  AV_CH_LAYOUT_6POINT0 },
+    { "7.0(front)",  7,  AV_CH_LAYOUT_7POINT0_FRONT },
+    { "7.1",         8,  AV_CH_LAYOUT_7POINT1 },
+};
 
 // FFmpegPlayer
 static JavaField player_m_native_player = {"mNativePlayer", "I"};
@@ -37,6 +55,9 @@ static JavaMethod audio_track_pause = {"pause", "()V"};
 static JavaMethod audio_track_play = {"play", "()V"};
 static JavaMethod audio_track_flush = {"flush", "()V"};
 static JavaMethod audio_track_stop = {"stop", "()V"};
+static JavaMethod audio_track_get_channel_count = {"getChannelCount", "()I"};
+static JavaMethod audio_track_get_sample_rate = {"getSampleRate", "()I"};
+
 
 // Player
 

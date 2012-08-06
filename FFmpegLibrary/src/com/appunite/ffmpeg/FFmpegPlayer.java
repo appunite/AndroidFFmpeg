@@ -254,38 +254,45 @@ private static class SeekTask extends AsyncTask<Integer, Void, NotPlayingExcepti
 	private AudioTrack prepareAudioTrack(int sampleRateInHz,
 			int numberOfChannels) {
 
-		int channelConfig;
-
-		if (numberOfChannels == 1) {
-			channelConfig = AudioFormat.CHANNEL_OUT_MONO;
-		} else if (numberOfChannels == 2) {
-			channelConfig = AudioFormat.CHANNEL_OUT_STEREO;
-		} else if (numberOfChannels == 3) {
-			channelConfig = AudioFormat.CHANNEL_OUT_FRONT_CENTER
-					| AudioFormat.CHANNEL_OUT_FRONT_RIGHT
-					| AudioFormat.CHANNEL_OUT_FRONT_LEFT;
-		} else if (numberOfChannels == 4) {
-			channelConfig = AudioFormat.CHANNEL_OUT_QUAD;
-		} else if (numberOfChannels == 5) {
-			channelConfig = AudioFormat.CHANNEL_OUT_QUAD
-					| AudioFormat.CHANNEL_OUT_LOW_FREQUENCY;
-		} else if (numberOfChannels == 6) {
-			channelConfig = AudioFormat.CHANNEL_OUT_5POINT1;
-		} else if (numberOfChannels == 8) {
-			channelConfig = AudioFormat.CHANNEL_OUT_7POINT1;
-		} else {
-			// TODO
-			throw new RuntimeException(
-					String.format(
-							"Could not play audio track with this number of channels: %d",
-							numberOfChannels));
+		for (;;) {
+			int channelConfig;
+			if (numberOfChannels == 1) {
+				channelConfig = AudioFormat.CHANNEL_OUT_MONO;
+			} else if (numberOfChannels == 2) {
+				channelConfig = AudioFormat.CHANNEL_OUT_STEREO;
+			} else if (numberOfChannels == 3) {
+				channelConfig = AudioFormat.CHANNEL_OUT_FRONT_CENTER
+						| AudioFormat.CHANNEL_OUT_FRONT_RIGHT
+						| AudioFormat.CHANNEL_OUT_FRONT_LEFT;
+			} else if (numberOfChannels == 4) {
+				channelConfig = AudioFormat.CHANNEL_OUT_QUAD;
+			} else if (numberOfChannels == 5) {
+				channelConfig = AudioFormat.CHANNEL_OUT_QUAD
+						| AudioFormat.CHANNEL_OUT_LOW_FREQUENCY;
+			} else if (numberOfChannels == 6) {
+				channelConfig = AudioFormat.CHANNEL_OUT_5POINT1;
+			} else if (numberOfChannels == 8) {
+				channelConfig = AudioFormat.CHANNEL_OUT_7POINT1;
+			} else {
+				channelConfig = AudioFormat.CHANNEL_OUT_STEREO;
+			}
+			try {
+				int minBufferSize = AudioTrack.getMinBufferSize(sampleRateInHz,
+						channelConfig, AudioFormat.ENCODING_PCM_16BIT);
+				AudioTrack audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC,
+						sampleRateInHz, channelConfig, AudioFormat.ENCODING_PCM_16BIT,
+						minBufferSize, AudioTrack.MODE_STREAM);
+				return audioTrack;
+			} catch (IllegalArgumentException e) {
+				if (numberOfChannels > 2) {
+					numberOfChannels = 2;
+				} else if (numberOfChannels > 1) {
+					numberOfChannels = 1;
+				} else {
+					throw e;
+				}
+			}
 		}
-		int minBufferSize = AudioTrack.getMinBufferSize(sampleRateInHz,
-				channelConfig, AudioFormat.ENCODING_PCM_16BIT);
-		AudioTrack audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC,
-				sampleRateInHz, channelConfig, AudioFormat.ENCODING_PCM_16BIT,
-				minBufferSize, AudioTrack.MODE_STREAM);
-		return audioTrack;
 	}
 
 	private void setVideoListener(FFmpegListener mpegListener) {

@@ -118,6 +118,8 @@ struct Player {
 	jmethodID audio_track_pause_method;
 	jmethodID audio_track_flush_method;
 	jmethodID audio_track_stop_method;
+	jmethodID audio_track_get_channel_count_method;
+	jmethodID audio_track_get_sample_rate_method;
 
 	jmethodID player_prepare_frame_method;
 	jmethodID player_on_update_time_method;
@@ -143,8 +145,12 @@ struct Player {
 	AVCodecContext *input_audio_codec_ctx;
 
 	jobject audio_track;
+	enum AVSampleFormat audio_track_format;
+	int audio_track_channel_count;
 
 	struct SwsContext *sws_context;
+	struct SwrContext *swr_context;
+	DECLARE_ALIGNED(16,uint8_t,audio_buf2)[AVCODEC_MAX_AUDIO_FRAME_SIZE * 4];
 
 	int video_duration;
 	int last_updated_time;
@@ -217,7 +223,9 @@ enum PlayerErrors {
 	ERROR_NOT_FOUND_PLAY_METHOD,
 	ERROR_NOT_FOUND_PAUSE_METHOD,
 	ERROR_NOT_FOUND_STOP_METHOD,
+	ERROR_NOT_FOUND_GET_CHANNEL_COUNT_METHOD,
 	ERROR_NOT_FOUND_FLUSH_METHOD,
+	ERROR_NOT_FOUND_GET_SAMPLE_RATE_METHOD,
 
 	ERROR_COULD_NOT_CREATE_AVCONTEXT,
 	ERROR_COULD_NOT_OPEN_VIDEO_FILE,
@@ -243,6 +251,8 @@ enum PlayerErrors {
 	ERROR_WHILE_ALLOCATING_AUDIO_SAMPLE,
 	ERROR_WHILE_DECODING_AUDIO_FRAME,
 	ERROR_NOT_CREATED_AUDIO_TRACK,
+	ERROR_NOT_CREATED_AUDIO_TRACK_GLOBAL_REFERENCE,
+	ERROR_COULD_NOT_INIT_SWR_CONTEXT,
 	ERROR_NOT_CREATED_AUDIO_SAMPLE_BYTE_ARRAY,
 	ERROR_PLAYING_AUDIO,
 	ERROR_WHILE_LOCING_BITMAP,
@@ -355,9 +365,40 @@ void * player_decode_audio(void * data) {
 			continue;
 		}
 
+
+		int original_data_size = av_samples_get_buffer_size(NULL, player->input_audio_codec_ctx->channels,
+					player->input_audio_frame->nb_samples, player->input_audio_codec_ctx->sample_fmt, 1);
+		uint8_t *audio_buf;
+		int data_size;
+
+		if (player->swr_context != NULL) {
+			uint8_t *out[] = {player->audio_buf2};
+
+			int sample_per_buffer_divider = player->audio_track_channel_count
+					* av_get_bytes_per_sample(player->audio_track_format);
+
+			int len2 = swr_convert(player->swr_context, out,
+					sizeof(player->audio_buf2) / sample_per_buffer_divider,
+					player->input_audio_frame->data, player->input_audio_frame->nb_samples);
+			if (len2 < 0) {
+				LOGE(1, "Could not resample frame");
+				pthread_mutex_lock(&player->mutex_queue);
+				goto stop;
+			}
+			if (len2 == sizeof(player->audio_buf2) / sample_per_buffer_divider) {
+				LOGI(1, "warning: audio buffer is probably too small\n");
+				swr_init(player->swr_context);
+			}
+			audio_buf = player->audio_buf2;
+			data_size = len2 * sample_per_buffer_divider;
+		} else {
+			audio_buf = player->input_audio_frame->data[0];
+			data_size = original_data_size;
+		}
+
 		LOGI(10, "player_decode_audio Decoded audio frame\n");
 
-		if ((err = player_write_audio(player, env, pts))) {
+		if ((err = player_write_audio(player, env, pts, audio_buf, data_size, original_data_size))) {
 			LOGE(1, "Could not write frame");
 			pthread_mutex_lock(&player->mutex_queue);
 			goto stop;
@@ -806,14 +847,11 @@ parse_frame:
 	return NULL;
 }
 
-int player_write_audio(struct Player *player, JNIEnv *env, int64_t pts) {
-	AVFrame * frame = player->input_audio_frame;
+int player_write_audio(struct Player *player, JNIEnv *env, int64_t pts, uint8_t *data, int data_size, int original_data_size) {
 	int err = ERROR_NO_ERROR;
 	int ret;
 	LOGI(10, "player_write_audio Writing audio frame")
 	AVCodecContext * c = player->input_audio_codec_ctx;
-	int data_size = av_samples_get_buffer_size(NULL, c->channels,
-			frame->nb_samples, c->sample_fmt, 1);
 
 	jbyteArray samples_byte_array = (*env)->NewByteArray(env, data_size);
 	if (samples_byte_array == NULL) {
@@ -823,12 +861,11 @@ int player_write_audio(struct Player *player, JNIEnv *env, int64_t pts) {
 
 	pthread_mutex_lock(&player->mutex_queue);
 
-	//FIXME do not increment - read from pts
 	if (pts != AV_NOPTS_VALUE) {
 		player->audio_clock = av_q2d(player->input_audio_stream->time_base)
 				* pts;
 	} else {
-		player->audio_clock += (double) data_size
+		player->audio_clock += (double) original_data_size
 				/ (c->channels * c->sample_rate
 						* av_get_bytes_per_sample(c->sample_fmt));
 	}
@@ -840,7 +877,7 @@ int player_write_audio(struct Player *player, JNIEnv *env, int64_t pts) {
 
 	jbyte *jni_samples = (*env)->GetByteArrayElements(env, samples_byte_array,
 			NULL);
-	memcpy(jni_samples, frame->data[0], data_size);
+	memcpy(jni_samples, data, data_size);
 	(*env)->ReleaseByteArrayElements(env, samples_byte_array, jni_samples, 0);
 
 	LOGI(10, "player_write_audio playing audio track");
@@ -1033,6 +1070,14 @@ int player_stop(struct State * state) {
 	pthread_mutex_unlock(&state->player->mutex_operation);
 
 	return ret;
+}
+
+uint64_t player_find_layout_from_channels(int nb_channels) {
+	int i;
+	for (i = 0; i < FF_ARRAY_ELEMS(channel_android_layout_map); i++)
+		if (nb_channels == channel_android_layout_map[i].nb_channels)
+			return channel_android_layout_map[i].layout;
+	return 0;
 }
 
 int player_set_data_source(struct State *state, const char *file_path) {
@@ -1291,10 +1336,58 @@ int player_set_data_source(struct State *state, const char *file_path) {
 
 	LOGI(3, "player_set_data_source 15");
 	player->audio_track = (*state->env)->NewGlobalRef(state->env, audio_track);
-	if (player->audio_track == NULL) {
-		// TODO check audio track
-	}
 	(*state->env)->DeleteLocalRef(state->env, audio_track);
+	if (player->audio_track == NULL) {
+		err = ERROR_NOT_CREATED_AUDIO_TRACK_GLOBAL_REFERENCE;
+		goto close_audio_codec;
+	}
+
+	player->audio_track_channel_count = (*state->env)->CallIntMethod(state->env,
+			player->audio_track, player->audio_track_get_channel_count_method);
+	int audio_track_sample_rate= (*state->env)->CallIntMethod(state->env,
+			player->audio_track, player->audio_track_get_sample_rate_method);
+	player->audio_track_format = AV_SAMPLE_FMT_S16;
+
+	int64_t audio_track_layout = player_find_layout_from_channels(player->audio_track_channel_count);
+
+	int64_t dec_channel_layout =
+			(player->input_audio_codec_ctx->channel_layout
+					&& player->input_audio_codec_ctx->channels
+							== av_get_channel_layout_nb_channels(
+									player->input_audio_codec_ctx->channel_layout)) ?
+					player->input_audio_codec_ctx->channel_layout :
+					av_get_default_channel_layout(player->input_audio_codec_ctx->channels);
+
+	player->swr_context = NULL;
+	if (player->input_audio_codec_ctx->sample_fmt != player->audio_track_format ||
+	                dec_channel_layout != audio_track_layout ||
+	                player->input_audio_codec_ctx->sample_rate != audio_track_sample_rate) {
+
+		LOGI(3, "player_set_data_sourcd preparing conversion of %d Hz %s %d channels to %d Hz %s %d channels",
+							player->input_audio_codec_ctx->sample_rate,
+						av_get_sample_fmt_name(player->input_audio_codec_ctx->sample_fmt),
+						player->input_audio_codec_ctx->channels,
+						audio_track_sample_rate,
+						av_get_sample_fmt_name(player->audio_track_format),
+						player->audio_track_channel_count);
+
+		player->swr_context = swr_alloc_set_opts(NULL, audio_track_layout,
+				player->audio_track_format, audio_track_sample_rate, dec_channel_layout,
+				player->input_audio_codec_ctx->sample_fmt,
+				player->input_audio_codec_ctx->sample_rate, 0, NULL);
+
+		if (!player->swr_context || swr_init(player->swr_context) < 0) {
+			LOGE(1, "Cannot create sample rate converter for conversion of %d Hz %s %d channels to %d Hz %s %d channels!",
+					player->input_audio_codec_ctx->sample_rate,
+				av_get_sample_fmt_name(player->input_audio_codec_ctx->sample_fmt),
+				player->input_audio_codec_ctx->channels,
+				audio_track_sample_rate,
+				av_get_sample_fmt_name(player->audio_track_format),
+				player->audio_track_channel_count);
+			err = ERROR_COULD_NOT_INIT_SWR_CONTEXT;
+			goto free_audio_track_ref;
+		}
+	}
 
 	player->last_updated_time = -1;
 	player->video_duration = round(
@@ -1322,7 +1415,7 @@ int player_set_data_source(struct State *state, const char *file_path) {
 	ret = pthread_attr_init(&attr);
 	if (ret) {
 		err = ERROR_COULD_NOT_INIT_PTHREAD_ATTR;
-		goto free_audio_track_ref;
+		goto free_swr_context;
 	}
 
 	ret = pthread_create(&player->thread_player_decode_video, &attr,
@@ -1380,6 +1473,11 @@ int player_set_data_source(struct State *state, const char *file_path) {
 		if (!err) {
 			err = ERROR_COULD_NOT_DESTROY_PTHREAD_ATTR;
 		}
+	}
+
+	free_swr_context:
+	if (player->swr_context != NULL) {
+		swr_free(&player->swr_context);
 	}
 
 	free_audio_track_ref:
@@ -1654,11 +1752,24 @@ int jni_player_init(JNIEnv *env, jobject thiz) {
 	}
 
 	player->audio_track_stop_method = java_get_method(env,
-				player->audio_track_class, audio_track_stop);
-		if (player->audio_track_stop_method == NULL) {
-			err = ERROR_NOT_FOUND_STOP_METHOD;
-			goto delete_audio_track_global_ref;
-		}
+			player->audio_track_class, audio_track_stop);
+	if (player->audio_track_stop_method == NULL) {
+		err = ERROR_NOT_FOUND_STOP_METHOD;
+		goto delete_audio_track_global_ref;
+	}
+
+	player->audio_track_get_channel_count_method = java_get_method(env,
+			player->audio_track_class, audio_track_get_channel_count);
+	if (player->audio_track_get_channel_count_method == NULL) {
+		err = ERROR_NOT_FOUND_GET_CHANNEL_COUNT_METHOD;
+		goto delete_audio_track_global_ref;
+	}
+
+	player->audio_track_get_sample_rate_method = java_get_method(env, player->audio_track_class, audio_track_get_sample_rate);
+	if (player->audio_track_get_sample_rate_method == NULL) {
+		err = ERROR_NOT_FOUND_GET_SAMPLE_RATE_METHOD;
+		goto delete_audio_track_global_ref;
+	}
 
 
 	pthread_mutex_init(&player->mutex_operation, NULL);
