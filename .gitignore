@@ -8,6 +8,7 @@ FFmpegLibrary/libs/**
 FFmpegLibrary/proguard/**
 FFmpegLibrary/.settings/**
 FFmpegLibrary/jni/.settings/**
+FFmpegLibrary/lint.xml
 
 FFmpegExample/bin/**
 FFmpegExample/gen/**
@@ -16,6 +17,7 @@ FFmpegExample/obj/**
 FFmpegExample/local.properties
 FFmpegExample/proguard/**
 FFmpegExample/.settings/**
+FFmpegExample/lint.xml
 
 
 .cproject
