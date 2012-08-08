@@ -37,6 +37,21 @@ downloading source code
 	cd FFmpegLibrary
 	cd jni
 
+setup freetype environemtn
+	cd freetype
+	./autogen.sh
+	cd ..
+
+setup fribidi environemtn
+	cd fribidi
+	autoreconf -ivf
+	cd ..
+
+setup libass environemtn
+	cd libass
+	autoreconf -ivf
+	cd ..
+
 setup vo-aacenc environment
 
 	cd vo-aacenc
