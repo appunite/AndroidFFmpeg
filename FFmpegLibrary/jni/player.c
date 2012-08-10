@@ -64,6 +64,11 @@
 #define FALSE 0
 #define TRUE (!(FALSE))
 
+#define SUBTITLES
+
+#ifdef SUBTITLES
+#include "blend.h"
+#endif // SUBTITLES
 
 #define DO_NOT_SEEK -1
 
@@ -142,6 +147,9 @@ struct Player {
 
 	int video_stream_no;
 	int audio_stream_no;
+#ifdef SUBTITLES
+	int subtitle_stream_no;
+#endif // SUBTITLES
 
 	AVStream *input_streams[MAX_STREAMS];
 	AVCodecContext * input_codec_ctxs[MAX_STREAMS];
@@ -274,6 +282,9 @@ enum PlayerErrors {
 	ERROR_COULD_NOT_FIND_AUDIO_CODEC,
 	ERROR_COULD_NOT_OPEN_AUDIO_CODEC,
 	ERROR_COULD_NOT_PREPARE_RGB_QUEUE,
+#ifdef SUBTITLES
+	ERROR_COULD_NOT_PREPARE_SUBTITLES_QUEUE,
+#endif // SUBTITLES
 	ERROR_COULD_NOT_PREPARE_AUDIO_PACKETS_QUEUE,
 	ERROR_COULD_NOT_PREPARE_VIDEO_PACKETS_QUEUE,
 
@@ -429,6 +440,97 @@ void player_decode_video_flush(struct DecoderData * decoder_data, JNIEnv * env) 
 			pthread_cond_wait(&player->cond_queue, &player->mutex_queue);
 	}
 }
+#ifdef SUBTITLES
+static void player_print_subtitle(AVSubtitle *sub, double pts) {
+	LOGI(3, "player_decode_subtitles pts: %fd", pts);
+	LOGI(3, "player_decode_subtitles sub.format: %d", sub->format);
+	LOGI(3, "player_decode_subtitles sub.start_display_time: %d", sub->start_display_time);
+	LOGI(3, "player_decode_subtitles sub.end_display_time: %d", sub->end_display_time);
+	LOGI(3, "player_decode_subtitles sub.num_rects: %d", sub->num_rects);
+	int i;
+	for (i = 0; i < sub->num_rects; ++i) {
+		AVSubtitleRect * rect = sub->rects[i];
+		LOGI(3, "player_decode_subtitles --rect->(x,y,w,h) = (%d,%d,%d,%d)",rect->x, rect->y, rect->w, rect->h);
+		LOGI(3, "player_decode_subtitles --rect->nb_colors = %d", rect->nb_colors);
+		LOGI(3, "player_decode_subtitles --rect->text = %s", rect->text);
+		LOGI(3, "player_decode_subtitles --rect->ass = %s", rect->ass);
+		LOGI(3, "player_decode_subtitles --rect->forced = %s", rect->forced ? "true" : "false");
+		char *type = "undefined";
+		if (rect->type == SUBTITLE_NONE) {
+			type = "none";
+		} else if (rect->type == SUBTITLE_BITMAP) {
+			type = "bitmap";
+		} else if (rect->type == SUBTITLE_TEXT) {
+			type = "text";
+		} else if (rect->type == SUBTITLE_ASS) {
+			type = "ass";
+		}
+		LOGI(3, "player_decode_subtitles --rect->type = %s", type);
+	}
+	LOGI(3, "player_decode_subtitles sub.pts: %d", sub->pts);
+}
+void player_decode_subtitles_flush(struct DecoderData * decoder_data, JNIEnv * env) {
+	// TODO
+}
+
+int player_decode_subtitles(struct DecoderData * decoder_data, JNIEnv * env, AVPacket *packet) {
+	struct Player *player = decoder_data->player;
+	int stream_no = decoder_data->stream_no;
+	AVCodecContext * ctx = player->input_codec_ctxs[stream_no];
+	AVStream * stream = player->input_streams[stream_no];
+
+	int to_write;
+	int interrupt_ret;
+
+
+	struct AVSubtitle sub;
+	int got_sub_ptr;
+	int ret = avcodec_decode_subtitle2(ctx, &sub, &got_sub_ptr, packet);
+	if (ret < 0) {
+		LOGE(1, "player_decode_subtitles Fail decoding %d", ret);
+		// ignore error - continue
+		return ERROR_NO_ERROR;
+	}
+	if (!got_sub_ptr) {
+		LOGI(10, "player_decode_subtitles frame not finished");
+		return ERROR_NO_ERROR;
+	}
+
+	double pts = 0;
+	if (packet->pts != AV_NOPTS_VALUE)
+		pts = av_q2d(stream->time_base) * packet->pts;
+
+	player_print_subtitle(&sub, pts);
+//	fix_rect_from_rgba_to_yuva(sub.num_rects, sub.rects);
+
+	pthread_mutex_lock(&player->mutex_queue);
+	struct SubtitleElem *elem = queue_push_start_already_locked(player->subtitles_queue,
+			&to_write,
+			(QueueCheckFunc) player_decode_queue_check_func, decoder_data,
+			(void **) &interrupt_ret);
+	if (elem == NULL) {
+		if (interrupt_ret == DECODE_CHECK_MSG_STOP) {
+			LOGI(2, "player_decode_video push stop");
+			pthread_mutex_unlock(&player->mutex_queue);
+			return 0;
+		} else if (interrupt_ret == DECODE_CHECK_MSG_FLUSH) {
+			LOGI(2, "player_decode_video push flush");
+			pthread_mutex_unlock(&player->mutex_queue);
+			return 0;
+		} else {
+			assert(FALSE);
+		}
+	}
+	pthread_mutex_unlock(&player->mutex_queue);
+
+	elem->subtitle = sub;
+	elem->start_time = pts + (sub.start_display_time / 1000.0);
+	elem->stop_time = pts + (sub.end_display_time / 1000.0);
+
+	queue_push_finish(player->subtitles_queue, to_write);
+	return ERROR_NO_ERROR;
+}
+#endif // SUBTITLES
 
 int player_decode_video(struct DecoderData * decoder_data, JNIEnv * env, AVPacket *packet) {
 	int got_frame_ptr;
@@ -486,6 +588,32 @@ int player_decode_video(struct DecoderData * decoder_data, JNIEnv * env, AVPacke
 			assert(FALSE);
 		}
 	}
+#ifdef SUBTITLES
+	struct SubtitleElem * subtitle = NULL;
+//	int subtitle_end_time;
+	for (;;) {
+		subtitle = queue_pop_start_already_locked_non_block(player->subtitles_queue);
+		LOGI(5, "player_decode_video reading subtitle");
+		if (subtitle == NULL) {
+			LOGI(5, "player_decode_video no more subtitles found");
+			break;
+		}
+		if (subtitle->stop_time >= time)
+			break;
+		avsubtitle_free(&subtitle->subtitle);
+		subtitle = NULL;
+		LOGI(5, "player_decode_video discarding old subtitle");
+		queue_pop_finish_already_locked(player->subtitles_queue);
+	}
+
+	if (subtitle != NULL) {
+		if (subtitle->start_time > time) {
+			LOGI(5, "player_decode_video rollback too new subtitle: %f > %f", subtitle->start_time, time);
+			queue_pop_roll_back_already_locked(player->subtitles_queue);
+			subtitle = NULL;
+		}
+	}
+#endif // SUBTITLES
 	pthread_mutex_unlock(&player->mutex_queue);
 	elem->time = time;
 	AVFrame * rgbFrame = elem->frame;
@@ -516,10 +644,28 @@ int player_decode_video(struct DecoderData * decoder_data, JNIEnv * env, AVPacke
 			rgbFrame->data, rgbFrame->linesize);
 #endif
 
+#ifdef SUBTITLES
+	if (subtitle != NULL) {
+		LOGI(5, "player_decode_video blend subtitle");
+		int i;
+		struct AVSubtitle *sub = &subtitle->subtitle;
+		for (i = 0; i < sub->num_rects; i++) {
+			blend_subrect_rgb((AVPicture *) rgbFrame, sub->rects[i], destWidth, destHeight, player->out_format);
+		}
+	}
+#endif // SUBTITLES
 
 	AndroidBitmap_unlockPixels(env, elem->jbitmap);
 
 	fail_lock_bitmap:
+#ifdef SUBTITLES
+	if (subtitle != NULL) {
+		LOGI(5, "player_decode_video rollback wroten subtitle");
+		queue_pop_roll_back(player->subtitles_queue);
+		subtitle = NULL;
+	}
+#endif // SUBTITLES
+
 	queue_push_finish(player->rgb_video_frames, to_write);
 	return err;
 }
@@ -575,6 +721,11 @@ void * player_decode(void * data) {
 		} else if (codec_type == AVMEDIA_TYPE_VIDEO) {
 			err = player_decode_video(decoder_data, env, packet);
 		} else {
+#ifdef SUBTITLES
+		if (codec_type == AVMEDIA_TYPE_SUBTITLE){
+			err = player_decode_subtitles(decoder_data, env, packet);
+		} else
+#endif // SUBTITLES
 			assert(FALSE);
 		}
 
@@ -605,7 +756,13 @@ void * player_decode(void * data) {
 			player_decode_audio_flush(decoder_data, env);
 		} else if (codec_type == AVMEDIA_TYPE_VIDEO) {
 			player_decode_video_flush(decoder_data, env);
-		} else {
+		} else
+#ifdef SUBTITLES
+		if (codec_type == AVMEDIA_TYPE_SUBTITLE) {
+			player_decode_subtitles_flush(decoder_data, env);
+		} else
+#endif // SUBTITLES
+		{
 			assert(FALSE);
 		}
 		LOGI(2, "player_decode flushed playback[%d]", stream_no);
@@ -1077,6 +1234,9 @@ void player_find_streams_free(struct Player *player) {
 	player->caputre_streams_no = 0;
 	player->video_stream_no = -1;
 	player->audio_stream_no = -1;
+#ifdef SUBTITLES
+	player->subtitle_stream_no = -1;
+#endif // SUBTITLES
 }
 
 int player_find_stream(struct Player *player, enum AVMediaType codec_type) {
@@ -1218,6 +1378,29 @@ void player_alloc_queues_free(struct Player *player) {
 		}
 	}
 }
+#ifdef SUBTITLES
+void player_prepare_subtitles_queue_free(struct Player *player) {
+	if (player->subtitles_queue != NULL) {
+		LOGI(7, "player_set_data_source free_video_frames_queue");
+		queue_free(player->subtitles_queue);
+		player->subtitles_queue = NULL;
+	}
+}
+
+int player_prepare_subtitles_queue(struct DecoderState *decoder_state) {
+	struct Player *player = decoder_state->player;
+
+	player->subtitles_queue = queue_init_with_custom_lock(30,
+			(queue_fill_func) player_fill_subtitles_queue,
+			(queue_free_func) player_free_subtitles_queue,
+			decoder_state,
+			&player->mutex_queue, &player->cond_queue);
+	if (player->subtitles_queue == NULL) {
+		return -ERROR_COULD_NOT_PREPARE_SUBTITLES_QUEUE;
+	}
+	return 0;
+}
+#endif // SUBTITLES
 
 void player_prepare_rgb_frames_free(struct Player *player) {
 	if (player->rgb_video_frames != NULL) {
@@ -1552,6 +1735,9 @@ void player_stop_without_lock(struct State * state) {
 	player_start_decoding_threads_free(player);
 	player_create_audio_track_free(player, state);
 	player_preapre_sws_context_free(player);
+#ifdef SUBTITLES
+	player_prepare_subtitles_queue_free(player);
+#endif // SUBTITLES
 	player_prepare_rgb_frames_free(player);
 	player_alloc_queues_free(player);
 	player_alloc_frames_free(player);
@@ -1607,6 +1793,12 @@ int player_set_data_source(struct State *state, const char *file_path, AVDiction
 		err = player->audio_stream_no;
 		goto error;
 	}
+#ifdef SUBTITLES
+	if ((player->subtitle_stream_no = player_find_stream(player, AVMEDIA_TYPE_SUBTITLE)) < 0) {
+		err = player->subtitle_stream_no;
+		goto error;
+	}
+#endif // SUBTITLES
 
 	if ((err = player_alloc_frames(player)) < 0)
 		goto error;
@@ -1617,6 +1809,11 @@ int player_set_data_source(struct State *state, const char *file_path, AVDiction
 	struct DecoderState video_decoder_state = {stream_no: player->video_stream_no, player: player, env:state->env, thiz: state->thiz};
 	if ((err = player_prepare_rgb_frames(&video_decoder_state)) < 0)
 		goto error;
+#ifdef SUBTITLES
+	struct DecoderState subtitle_decoder_state = {stream_no: player->subtitle_stream_no, player: player, env:state->env, thiz: state->thiz};
+	if ((err = player_prepare_subtitles_queue(&subtitle_decoder_state)) < 0)
+		goto error;
+#endif // SUBTITLES
 
 	if ((err = player_preapre_sws_context(player)) < 0)
 		goto error;
@@ -1647,6 +1844,9 @@ error:
 	player_start_decoding_threads_free(player);
 	player_create_audio_track_free(player, state);
 	player_preapre_sws_context_free(player);
+#ifdef SUBTITLES
+	player_prepare_subtitles_queue_free(player);
+#endif // SUBTITLES
 	player_prepare_rgb_frames_free(player);
 	player_alloc_queues_free(player);
 	player_alloc_frames_free(player);
@@ -1836,6 +2036,9 @@ int jni_player_init(JNIEnv *env, jobject thiz) {
 	memset(player, 0, sizeof(player));
 	player->audio_stream_no = -1;
 	player->video_stream_no = -1;
+#ifdef SUBTITLES
+	player->subtitle_stream_no = -1;
+#endif // SUBTITLES
 	player->rendering = FALSE;
 
 	int err = ERROR_NO_ERROR;
