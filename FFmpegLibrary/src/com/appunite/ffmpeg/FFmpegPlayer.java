@@ -157,14 +157,16 @@ private static class SeekTask extends AsyncTask<Integer, Void, NotPlayingExcepti
 
 	static {
 		NativeTester nativeTester = new NativeTester();
-		if (nativeTester.isNeon()) {
-			System.loadLibrary("ffmpeg-neon");			
-		} else if (nativeTester.isVfpv3()) {
+		if (nativeTester.isVfpv3()) {
 			System.loadLibrary("ffmpeg-vfpv3");
+			System.loadLibrary("ffmpeg-jni-vfpv3");
+		} else if (nativeTester.isNeon()) {
+			System.loadLibrary("ffmpeg-neon");	
+			System.loadLibrary("ffmpeg-jni-neon");		
 		} else {
-			System.loadLibrary("ffmpeg");			
+			System.loadLibrary("ffmpeg");	
+			System.loadLibrary("ffmpeg-jni");			
 		}
-		System.loadLibrary("ffmpeg-jni");
 	}
 
 	private FFmpegListener mpegListener = null;
@@ -210,7 +212,7 @@ private static class SeekTask extends AsyncTask<Integer, Void, NotPlayingExcepti
 	private native void deallocNative();
 	
 	private native int setDataSourceNative(String url, Map<String, String> dictionary);
-	private native int stopNative();
+	private native void stopNative();
 
 	public native void renderFrameStart();
 	public native void renderFrameStop();	

@@ -53,6 +53,8 @@ void *queue_pop_start_already_locked(Queue *queue, QueueCheckFunc func,
 		void *check_data, void *check_ret_data);
 void *queue_pop_start(Queue *queue, QueueCheckFunc func, void *check_data,
 		void *check_ret_data);
+void queue_pop_roll_back_already_locked(Queue *queue);
+void queue_pop_roll_back(Queue *queue);
 void queue_pop_finish_already_locked(Queue *queue);
 void queue_pop_finish(Queue *queue);
 

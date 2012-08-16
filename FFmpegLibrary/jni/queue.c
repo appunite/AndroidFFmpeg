@@ -251,6 +251,19 @@ void *queue_pop_start(Queue *queue, QueueCheckFunc func, void *check_data,
 	return ret;
 }
 
+void queue_pop_roll_back_already_locked(Queue *queue) {
+	assert(queue->in_read);
+	queue->in_read = FALSE;
+
+	pthread_cond_broadcast(queue->main_cond);
+}
+
+void queue_pop_roll_back(Queue *queue) {
+	pthread_mutex_lock(queue->main_lock);
+	queue_pop_roll_back_already_locked(queue);
+	pthread_mutex_unlock(queue->main_lock);
+}
+
 void queue_pop_finish_already_locked(Queue *queue) {
 	assert(queue->in_read);
 	queue->in_read = FALSE;

@@ -82,7 +82,7 @@ void jni_player_pause(JNIEnv *env, jobject thiz);
 void jni_player_resume(JNIEnv *env, jobject thiz);
 
 int jni_player_set_data_source(JNIEnv *env, jobject thiz, jstring string, jobject dictionary);
-int jni_player_stop(JNIEnv *env, jobject thiz);
+void jni_player_stop(JNIEnv *env, jobject thiz);
 
 void jni_player_render_frame_start(JNIEnv *env, jobject thiz);
 void jni_player_render_frame_stop(JNIEnv *env, jobject thiz);
@@ -102,7 +102,7 @@ static JNINativeMethod player_methods[] = {
 	{"resumeNative", "()V", (void*) jni_player_resume},
 
 	{"setDataSourceNative", "(Ljava/lang/String;Ljava/util/Map;)I", (void*) jni_player_set_data_source},
-	{"stopNative", "()I", (void*) jni_player_stop},
+	{"stopNative", "()V", (void*) jni_player_stop},
 
 	{"renderFrameStart", "()V", (void*) jni_player_render_frame_start},
 	{"renderFrameStop", "()V", (void*) jni_player_render_frame_stop},

@@ -33,10 +33,10 @@ MODULE_ENCRYPT:=yes
 #if armeabi-v7a
 ifeq ($(TARGET_ARCH_ABI), armeabi-v7a)
 	# add neon optimization code (only armeabi-v7a)
-	#FEATURE_NEON:=yes
+	FEATURE_NEON:=yes
 	
 	# add vfpv3-d32 optimization code (only armeabi-v7a)
-	#FEATURE_VFPV3:=yes
+	FEATURE_VFPV3:=yes
 else
 
 endif
@@ -95,8 +95,6 @@ ifdef FEATURE_VFPV3
 endif
 
 
-
-
 #ffmpeg-jni library
 include $(CLEAR_VARS)
 LOCAL_ALLOW_UNDEFINED_SYMBOLS=false
@@ -131,9 +129,67 @@ ifdef MODULE_ENCRYPT
 	LOCAL_STATIC_LIBRARIES += tropicssl
 endif
 
-LOCAL_LDLIBS  := -llog -ljnigraphics -lz -lm -g $(LOCAL_PATH)/ffmpeg-build/$(TARGET_ARCH_ABI)/libffmpeg.so
+LOCAL_LDLIBS := -llog -ljnigraphics -lz -lm -g $(LOCAL_PATH)/ffmpeg-build/$(TARGET_ARCH_ABI)/libffmpeg.so
 include $(BUILD_SHARED_LIBRARY)
 
+
+ifdef FEATURE_VFPV3
+include $(CLEAR_VARS)
+LOCAL_ALLOW_UNDEFINED_SYMBOLS=false
+LOCAL_MODULE := ffmpeg-jni-vfpv3
+LOCAL_SRC_FILES := ffmpeg-jni.c player.c queue.c helpers.c jni-protocol.c
+LOCAL_C_INCLUDES := $(LOCAL_PATH)/ffmpeg-build/$(TARGET_ARCH_ABI)/include
+LOCAL_SHARED_LIBRARY := ffmpeg-prebuilt-vfpv3
+
+#if enabled profiler add it
+ifdef LIBRARY_PROFILER
+	LOCAL_CFLAGS += -pg -g -DPROFILER
+	LOCAL_STATIC_LIBRARIES += andprof
+endif
+
+ifdef LIBRARY_YUV2RGB
+	LOCAL_CFLAGS += -DYUV2RGB
+	LOCAL_STATIC_LIBRARIES += yuv2rgb
+endif
+
+ifdef MODULE_ENCRYPT
+	LOCAL_CFLAGS += -DMODULE_ENCRYPT
+	LOCAL_SRC_FILES += aes-protocol.c
+	LOCAL_C_INCLUDES += $(LOCAL_PATH)/tropicssl/include
+	LOCAL_STATIC_LIBRARIES += tropicssl
+endif
+LOCAL_LDLIBS := -llog -ljnigraphics -lz -lm -g $(LOCAL_PATH)/ffmpeg-build/$(TARGET_ARCH_ABI)/libffmpeg-vfpv3.so
+include $(BUILD_SHARED_LIBRARY)
+endif
+
+ifdef FEATURE_NEON
+include $(CLEAR_VARS)
+LOCAL_ALLOW_UNDEFINED_SYMBOLS=false
+LOCAL_MODULE := ffmpeg-jni-neon
+LOCAL_SRC_FILES := ffmpeg-jni.c player.c queue.c helpers.c jni-protocol.c
+LOCAL_C_INCLUDES := $(LOCAL_PATH)/ffmpeg-build/$(TARGET_ARCH_ABI)/include
+LOCAL_SHARED_LIBRARY := ffmpeg-prebuilt-neon
+
+#if enabled profiler add it
+ifdef LIBRARY_PROFILER
+	LOCAL_CFLAGS += -pg -g -DPROFILER
+	LOCAL_STATIC_LIBRARIES += andprof
+endif
+
+ifdef LIBRARY_YUV2RGB
+	LOCAL_CFLAGS += -DYUV2RGB
+	LOCAL_STATIC_LIBRARIES += yuv2rgb
+endif
+
+ifdef MODULE_ENCRYPT
+	LOCAL_CFLAGS += -DMODULE_ENCRYPT
+	LOCAL_SRC_FILES += aes-protocol.c
+	LOCAL_C_INCLUDES += $(LOCAL_PATH)/tropicssl/include
+	LOCAL_STATIC_LIBRARIES += tropicssl
+endif
+LOCAL_LDLIBS := -llog -ljnigraphics -lz -lm -g $(LOCAL_PATH)/ffmpeg-build/$(TARGET_ARCH_ABI)/libffmpeg-neon.so
+include $(BUILD_SHARED_LIBRARY)
+endif
 
 
 #nativetester-jni library
