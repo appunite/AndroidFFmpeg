@@ -12,13 +12,13 @@
 	url = git://git.videolan.org/x264.git
 [submodule "FFmpegLibrary/jni/tropicssl"]
 	path = FFmpegLibrary/jni/tropicssl
-	url = ssh://review.appunite.com/tropicssl.git
+	url = https://review.appunite.com/tropicssl.git
 [submodule "FFmpegLibrary/jni/libass"]
 	path = FFmpegLibrary/jni/libass
 	url = https://code.google.com/p/libass/
 [submodule "FFmpegLibrary/jni/fribidi"]
 	path = FFmpegLibrary/jni/fribidi
-	url = ssh://review.appunite.com/fribidi.git
+	url = https://review.appunite.com/fribidi.git
 [submodule "FFmpegLibrary/jni/freetype2"]
 	path = FFmpegLibrary/jni/freetype2
 	url = git://git.sv.gnu.org/freetype/freetype2.git

@@ -28,26 +28,43 @@ on Mac - you can use tool brew from homebrew project. You have additionally inst
 
 
 ## Instalation
+
+### Before start
+if you have a problem with certificate add *GIT\_SSL\_NO\_VERIFY=true* before git submodule update line
+
+	GIT_SSL_NO_VERIFY=true  git submodule update
+
+Im sorry about this certifficate issue, but never is enough time to fix problems like those
+
+**If you have ssh key in our review system** you should setup global alias in *~/.gitconfig* file.
+
+	git config --global url.ssh://review.appunite.com.insteadOf https://review.appunite.com
+
+### Go to the work
 downloading source code 
 
 	git clone git://github.com/appunite/AndroidFFmpeg.git AndroidFFmpeg
 	cd AndroidFFmpeg
 	git submodule init
+	git submodule sync #if you are updating source code
 	git submodule update
 	cd FFmpegLibrary
 	cd jni
 
 setup freetype environemtn
+
 	cd freetype
 	./autogen.sh
 	cd ..
 
 setup fribidi environemtn
+
 	cd fribidi
 	autoreconf -ivf
 	cd ..
 
 setup libass environemtn
+
 	cd libass
 	autoreconf -ivf
 	cd ..
