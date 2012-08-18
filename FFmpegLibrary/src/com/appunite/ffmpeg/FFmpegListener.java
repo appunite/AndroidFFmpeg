@@ -19,7 +19,7 @@
 package com.appunite.ffmpeg;
 
 public interface FFmpegListener {
-	void onFFDataSourceLoaded(FFmpegError err);
+	void onFFDataSourceLoaded(FFmpegError err, FFmpegStreamInfo[] streams);
 	void onFFResume(NotPlayingException result);
 	void onFFPause(NotPlayingException err);
 	void onFFStop();

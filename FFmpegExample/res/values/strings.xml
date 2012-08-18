@@ -9,4 +9,7 @@
 	<string name="select_item">Select video file</string>
 	<string name="convert">Convert Video</string>
 	<string name="could_convert_video">Could not convert video</string>
+	<string name="language_spinner_drop_down">Language: %s</string>
+	<string name="subtitle_spinner_drop_down">Subtitle: %s</string>
+	<string name="unknown">Unknown</string>
 </resources>

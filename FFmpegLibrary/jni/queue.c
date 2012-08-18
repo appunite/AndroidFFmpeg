@@ -37,8 +37,6 @@ struct _Queue {
 	void * free_func_obj;
 
 	int is_custom_lock;
-	pthread_cond_t *main_cond;
-	pthread_mutex_t *main_lock;
 	int size;
 	void ** tab;
 };
@@ -66,8 +64,6 @@ Queue *queue_init_with_custom_lock(int size, queue_fill_func fill_func,
 	queue->free_func_obj = obj;
 
 	queue->is_custom_lock = TRUE;
-	queue->main_cond = custom_cond;
-	queue->main_lock = custom_lock;
 
 	queue->size = size;
 
@@ -101,40 +97,17 @@ Queue *queue_init_with_custom_lock(int size, queue_fill_func fill_func,
 	end: return queue;
 }
 
-Queue *queue_init(int size, queue_fill_func fill_func,
-		queue_free_func free_func, void * obj) {
-	Queue *queue = NULL;
+void queue_free(Queue *queue, pthread_mutex_t * mutex, pthread_cond_t *cond) {
+	pthread_mutex_lock(mutex);
+	while (queue->in_read)
+		pthread_cond_wait(cond, mutex);
 
-	pthread_mutex_t *main_lock = malloc(sizeof(*main_lock));
-	if (!main_lock)
-		goto end;
-
-	pthread_cond_t *main_cond = malloc(sizeof(*main_cond));
-	if (!main_cond)
-		goto free_main_lock;
-
-	queue = queue_init_with_custom_lock(size, fill_func, free_func, obj,
-			main_lock, main_cond);
-	if (!queue)
-		goto free_main_cond;
-
-	queue->is_custom_lock = FALSE;
-
-	goto end;
-
-	free_main_cond: free(main_cond);
-
-	free_main_lock: free(main_lock);
-
-	end: return queue;
-}
-
-void queue_free(Queue *queue) {
 	int i;
 	for (i = queue->size - 1; i >= 0; --i) {
 		void *elem = queue->tab[i];
 		queue->free_func(queue->free_func_obj, elem);
 	}
+	pthread_mutex_unlock(mutex);
 
 	free(queue->tab);
 
@@ -143,7 +116,8 @@ void queue_free(Queue *queue) {
 	free(queue);
 }
 
-void *queue_push_start_already_locked(Queue *queue, int *to_write, QueueCheckFunc func,
+void *queue_push_start_already_locked(Queue *queue, pthread_mutex_t * mutex,
+		pthread_cond_t *cond, int *to_write, QueueCheckFunc func,
 		void *check_data, void *check_ret_data) {
 	int next_next_to_write;
 	while (1) {
@@ -159,41 +133,41 @@ void *queue_push_start_already_locked(Queue *queue, int *to_write, QueueCheckFun
 		else
 			assert(FALSE);
 
-		test:
-		next_next_to_write = queue_get_next(queue, queue->next_to_write);
+		test: next_next_to_write = queue_get_next(queue, queue->next_to_write);
 		if (next_next_to_write != queue->next_to_read) {
 			break;
 		}
 
-		wait:
-		pthread_cond_wait(queue->main_cond, queue->main_lock);
+		wait: pthread_cond_wait(cond, mutex);
 	}
 	*to_write = queue->next_to_write;
 	queue->ready[*to_write] = FALSE;
 
 	queue->next_to_write = next_next_to_write;
 
-	pthread_cond_broadcast(queue->main_cond);
+	pthread_cond_broadcast(cond);
 
-	end:
-	return queue->tab[*to_write];
+	end: return queue->tab[*to_write];
 }
 
-void *queue_push_start(Queue *queue, int *to_write, QueueCheckFunc func,
+void *queue_push_start(Queue *queue, pthread_mutex_t * mutex,
+		pthread_cond_t *cond, int *to_write, QueueCheckFunc func,
 		void *check_data, void *check_ret_data) {
 	void *ret;
-	pthread_mutex_lock(queue->main_lock);
-	ret = queue_push_start_already_locked(queue, to_write, func, check_data, check_ret_data);
-	pthread_mutex_unlock(queue->main_lock);
+	pthread_mutex_lock(mutex);
+	ret = queue_push_start_already_locked(queue, mutex, cond, to_write, func,
+			check_data, check_ret_data);
+	pthread_mutex_unlock(mutex);
 	return ret;
 }
 
-void queue_push_finish(Queue *queue, int to_write) {
-	pthread_mutex_lock(queue->main_lock);
+void queue_push_finish(Queue *queue, pthread_mutex_t * mutex,
+		pthread_cond_t *cond, int to_write) {
+	pthread_mutex_lock(mutex);
 	queue->ready[to_write] = TRUE;
 
-	pthread_cond_broadcast(queue->main_cond);
-	pthread_mutex_unlock(queue->main_lock);
+	pthread_cond_broadcast(cond);
+	pthread_mutex_unlock(mutex);
 }
 
 void *queue_pop_start_already_locked_non_block(Queue *queue) {
@@ -208,14 +182,15 @@ void *queue_pop_start_already_locked_non_block(Queue *queue) {
 	return queue->tab[to_read];
 }
 
-void *queue_pop_start_already_locked(Queue *queue, QueueCheckFunc func, void *check_data,
+void *queue_pop_start_already_locked(Queue **queue, pthread_mutex_t * mutex,
+		pthread_cond_t *cond, QueueCheckFunc func, void *check_data,
 		void *check_ret_data) {
-	assert(!queue->in_read);
 	int to_read;
+	Queue *q;
 	while (1) {
 		if (func == NULL)
 			goto test;
-		QueueCheckFuncRet check = func(queue, check_data, check_ret_data);
+		QueueCheckFuncRet check = func(*queue, check_data, check_ret_data);
 		if (check == QUEUE_CHECK_FUNC_RET_SKIP)
 			goto skip;
 		else if (check == QUEUE_CHECK_FUNC_RET_WAIT)
@@ -225,73 +200,75 @@ void *queue_pop_start_already_locked(Queue *queue, QueueCheckFunc func, void *ch
 		else
 			assert(FALSE);
 		test:
-		if (queue->next_to_read != queue->next_to_write
-				&& queue->ready[queue->next_to_read])
+		q = *queue;
+		assert(!q->in_read);
+		if (q->next_to_read != q->next_to_write
+				&& q->ready[q->next_to_read])
 			break;
-		wait:
-		pthread_cond_wait(queue->main_cond, queue->main_lock);
+		wait: pthread_cond_wait(cond, mutex);
 	}
-	to_read = queue->next_to_read;
-	queue->in_read = TRUE;
+	q=*queue;
+	to_read = q->next_to_read;
+	q->in_read = TRUE;
 
 	end:
 
-	return queue->tab[to_read];
+	return q->tab[to_read];
 
-	skip:
-	return NULL;
+	skip: return NULL;
 }
 
-void *queue_pop_start(Queue *queue, QueueCheckFunc func, void *check_data,
+void *queue_pop_start(Queue **queue, pthread_mutex_t * mutex,
+		pthread_cond_t *cond, QueueCheckFunc func, void *check_data,
 		void *check_ret_data) {
 	void *ret;
-	pthread_mutex_lock(queue->main_lock);
-	ret = queue_pop_start_already_locked(queue, func, check_data, check_ret_data);
-	pthread_mutex_unlock(queue->main_lock);
+	pthread_mutex_lock(mutex);
+	ret = queue_pop_start_already_locked(queue, mutex, cond, func, check_data,
+			check_ret_data);
+	pthread_mutex_unlock(mutex);
 	return ret;
 }
 
-void queue_pop_roll_back_already_locked(Queue *queue) {
+void queue_pop_roll_back_already_locked(Queue *queue, pthread_mutex_t * mutex,
+		pthread_cond_t *cond) {
 	assert(queue->in_read);
 	queue->in_read = FALSE;
 
-	pthread_cond_broadcast(queue->main_cond);
+	pthread_cond_broadcast(cond);
 }
 
-void queue_pop_roll_back(Queue *queue) {
-	pthread_mutex_lock(queue->main_lock);
-	queue_pop_roll_back_already_locked(queue);
-	pthread_mutex_unlock(queue->main_lock);
+void queue_pop_roll_back(Queue *queue, pthread_mutex_t * mutex,
+		pthread_cond_t *cond) {
+	pthread_mutex_lock(mutex);
+	queue_pop_roll_back_already_locked(queue, mutex, cond);
+	pthread_mutex_unlock(mutex);
 }
 
-void queue_pop_finish_already_locked(Queue *queue) {
+void queue_pop_finish_already_locked(Queue *queue, pthread_mutex_t * mutex,
+		pthread_cond_t *cond) {
 	assert(queue->in_read);
 	queue->in_read = FALSE;
 	queue->next_to_read = queue_get_next(queue, queue->next_to_read);
 
-	pthread_cond_broadcast(queue->main_cond);
+	pthread_cond_broadcast(cond);
 }
 
-void queue_pop_finish(Queue *queue) {
-	pthread_mutex_lock(queue->main_lock);
-	queue_pop_finish_already_locked(queue);
-	pthread_mutex_unlock(queue->main_lock);
+void queue_pop_finish(Queue *queue, pthread_mutex_t * mutex,
+		pthread_cond_t *cond) {
+	pthread_mutex_lock(mutex);
+	queue_pop_finish_already_locked(queue, mutex, cond);
+	pthread_mutex_unlock(mutex);
 }
 
 int queue_get_size(Queue *queue) {
 	return queue->size;
 }
-//void queue_interrupt(Queue *queue, QueueInterruptFunc func, void *data) {
-//	pthread_mutex_lock(&queue->main_lock);
-//	func(queue, data);
-//	pthread_cond_broadcast(&queue->main_cond);
-//	pthread_mutex_unlock(&queue->main_lock);
-//}
 
-void queue_wait_for(Queue *queue, int size) {
+void queue_wait_for(Queue *queue, int size, pthread_mutex_t * mutex,
+		pthread_cond_t *cond) {
 	assert(queue->size >= size);
 
-	pthread_mutex_lock(queue->main_lock);
+	pthread_mutex_lock(mutex);
 	while (1) {
 		int next = queue->next_to_read;
 		int i;
@@ -309,8 +286,8 @@ void queue_wait_for(Queue *queue, int size) {
 		if (all_ok)
 			break;
 
-		pthread_cond_wait(queue->main_cond, queue->main_lock);
+		pthread_cond_wait(cond, mutex);
 	}
-	pthread_mutex_unlock(queue->main_lock);
+	pthread_mutex_unlock(mutex);
 }
 

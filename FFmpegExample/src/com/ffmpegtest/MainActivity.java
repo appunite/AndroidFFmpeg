@@ -19,12 +19,16 @@
 package com.ffmpegtest;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.ActivityInfo;
 import android.graphics.PixelFormat;
@@ -33,20 +37,29 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemSelectedListener;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckedTextView;
 import android.widget.SeekBar;
+import android.widget.Spinner;
 import android.widget.SeekBar.OnSeekBarChangeListener;
+import android.widget.TextView;
 
 import com.appunite.ffmpeg.FFmpegDisplay;
 import com.appunite.ffmpeg.FFmpegError;
 import com.appunite.ffmpeg.FFmpegListener;
 import com.appunite.ffmpeg.FFmpegPlayer;
+import com.appunite.ffmpeg.FFmpegStreamInfo;
+import com.appunite.ffmpeg.FFmpegStreamInfo.CodecType;
 import com.appunite.ffmpeg.NotPlayingException;
 
 public class MainActivity extends Activity implements OnClickListener,
-		FFmpegListener, OnSeekBarChangeListener {
+		FFmpegListener, OnSeekBarChangeListener, OnItemSelectedListener {
 
 	private FFmpegPlayer mpegPlayer;
 	private static boolean isSurfaceView = true;
@@ -57,6 +70,16 @@ public class MainActivity extends Activity implements OnClickListener,
 	private View videoView;
 	private Button playPauseButton;
 	private boolean mTracking = false;
+	private View streamsView;
+	private Spinner languageSpinner;
+	private int languageSpinnerSelectedPosition = 0;
+	private Spinner subtitleSpinner;
+	private int subtitleSpinnerSelectedPosition = 0;
+	private StreamAdapter languageAdapter;
+	private StreamAdapter subtitleAdapter;
+
+	private FFmpegStreamInfo audioStream = null;
+	private FFmpegStreamInfo subtitleStream = null;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -83,15 +106,85 @@ public class MainActivity extends Activity implements OnClickListener,
 
 		playPauseButton = (Button) this.findViewById(R.id.play_pause);
 		playPauseButton.setOnClickListener(this);
-		
-		controlsView = this.findViewById(R.id.controls);
-		loadingView = this.findViewById(R.id.loading_view);
 
-		videoView = this
-				.findViewById(R.id.video_view);
-		this.mpegPlayer = new FFmpegPlayer( (FFmpegDisplay) videoView, this);
+		controlsView = this.findViewById(R.id.controls);
+		streamsView = this.findViewById(R.id.streams);
+		loadingView = this.findViewById(R.id.loading_view);
+		languageSpinner = (Spinner) this.findViewById(R.id.language_spinner);
+		subtitleSpinner = (Spinner) this.findViewById(R.id.subtitle_spinner);
+
+		languageAdapter = new StreamAdapter(this,
+				android.R.layout.simple_spinner_item,
+				new ArrayList<FFmpegStreamInfo>(), StreamAdapterType.AUDIO);
+		languageAdapter
+				.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+		languageSpinner.setAdapter(languageAdapter);
+		languageSpinner.setOnItemSelectedListener(this);
+
+		subtitleAdapter = new StreamAdapter(this,
+				android.R.layout.simple_spinner_item,
+				new ArrayList<FFmpegStreamInfo>(), StreamAdapterType.SUBTITLE);
+		subtitleAdapter
+				.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+		subtitleSpinner.setAdapter(subtitleAdapter);
+		subtitleSpinner.setOnItemSelectedListener(this);
+
+		videoView = this.findViewById(R.id.video_view);
+		this.mpegPlayer = new FFmpegPlayer((FFmpegDisplay) videoView, this);
 		this.mpegPlayer.setMpegListener(this);
 		play();
+	}
+
+	private static enum StreamAdapterType {
+		AUDIO, SUBTITLE
+	};
+
+	private static class StreamAdapter extends ArrayAdapter<FFmpegStreamInfo> {
+
+		private final StreamAdapterType adapterType;
+
+		public StreamAdapter(Context context, int textViewResourceId,
+				List<FFmpegStreamInfo> objects, StreamAdapterType adapterType) {
+			super(context, textViewResourceId, objects);
+			this.adapterType = adapterType;
+		}
+
+		@Override
+		public View getView(int position, View convertView, ViewGroup parent) {
+			TextView view = (TextView) super.getView(position, convertView,
+					parent);
+
+			FFmpegStreamInfo item = getItem(position);
+			Locale locale = item.getLanguage();
+
+			String formatter;
+			if (StreamAdapterType.AUDIO.equals(adapterType)) {
+				formatter = getContext().getString(
+						R.string.language_spinner_drop_down);
+			} else {
+				formatter = getContext().getString(
+						R.string.subtitle_spinner_drop_down);
+			}
+			String languageName = locale == null ? getContext().getString(
+					R.string.unknown) : locale.getDisplayLanguage();
+			String text = String.format(formatter, languageName);
+			view.setText(text);
+			return view;
+		}
+
+		@Override
+		public View getDropDownView(int position, View convertView,
+				ViewGroup parent) {
+			CheckedTextView view = (CheckedTextView) super.getDropDownView(
+					position, convertView, parent);
+			FFmpegStreamInfo item = getItem(position);
+			Locale locale = item.getLanguage();
+			String languageName = locale == null ? getContext().getString(
+					R.string.unknown) : locale.getDisplayLanguage();
+			view.setText(languageName);
+			return view;
+		}
+
 	}
 
 	@Override
@@ -103,7 +196,7 @@ public class MainActivity extends Activity implements OnClickListener,
 	protected void onResume() {
 		super.onResume();
 	}
-	
+
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
@@ -129,12 +222,10 @@ public class MainActivity extends Activity implements OnClickListener,
 			base = "vod";
 		}
 		if (http) {
-			url = String.format(
-					"http://%s:1935/%s/mp4:%s/playlist.m3u8", host,
+			url = String.format("http://%s:1935/%s/mp4:%s/playlist.m3u8", host,
 					base, video);
 		} else {
-			url = String.format("rtsp://%s:1935/%s/mp4:%s", host,
-					base, video);
+			url = String.format("rtsp://%s:1935/%s/mp4:%s", host, base, video);
 		}
 		// url =
 		// "http://devimages.apple.com.edgekey.net/resources/http-streaming/examples/bipbop_4x3/bipbop_4x3_variant.m3u8";
@@ -142,23 +233,27 @@ public class MainActivity extends Activity implements OnClickListener,
 		// url =
 		// "https://devimages.apple.com.edgekey.net/resources/http-streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8";
 		// // apple advanced
-		
-//		File videoFile = new File(Environment.getExternalStorageDirectory(), "mission.mp4");
-//		url = "file://" + videoFile.getAbsolutePath();
-		
-//		File videoFile = new File(Environment.getExternalStorageDirectory(), "Movies/no.mkv");
-//		url = "file://" + videoFile.getAbsolutePath();
-		
-		
-		File videoFile = new File(Environment.getExternalStorageDirectory(), "encrypted.mp4");
-		url = "aes+file://" + videoFile.getAbsolutePath();
-		HashMap<String, String> dictionary = new HashMap<String, String>();
-		dictionary.put("aeskey", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-		
-		
-		
-		mpegPlayer.setDataSource(url, dictionary);
-		
+
+		HashMap<String, String> dictionary = null;
+
+		// File videoFile = new File(Environment.getExternalStorageDirectory(),
+		// "mission.mp4");
+		// url = "file://" + videoFile.getAbsolutePath();
+
+		File videoFile = new File(Environment.getExternalStorageDirectory(),
+				"james.mkv");
+		url = "file://" + videoFile.getAbsolutePath();
+
+		//
+		// File videoFile = new File(Environment.getExternalStorageDirectory(),
+		// "encrypted.mp4");
+		// url = "aes+file://" + videoFile.getAbsolutePath();
+		// dictionary = new HashMap<String, String>();
+		// dictionary.put("aeskey", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+
+		mpegPlayer.setDataSource(url, dictionary, null, audioStream,
+				subtitleStream);
+
 	}
 
 	@Override
@@ -183,23 +278,20 @@ public class MainActivity extends Activity implements OnClickListener,
 	}
 
 	@Override
-	public void onFFDataSourceLoaded(FFmpegError err) {
+	public void onFFDataSourceLoaded(FFmpegError err, FFmpegStreamInfo[] streams) {
 		if (err != null) {
 			String format = getResources().getString(
 					R.string.main_could_not_open_stream);
-			String message = String.format(format,
-					err.getMessage());
+			String message = String.format(format, err.getMessage());
 
-			Builder builder = new AlertDialog.Builder(
-					MainActivity.this);
+			Builder builder = new AlertDialog.Builder(MainActivity.this);
 			builder.setTitle(R.string.app_name)
 					.setMessage(message)
 					.setOnCancelListener(
 							new DialogInterface.OnCancelListener() {
 
 								@Override
-								public void onCancel(
-										DialogInterface dialog) {
+								public void onCancel(DialogInterface dialog) {
 									MainActivity.this.finish();
 								}
 							}).show();
@@ -208,10 +300,21 @@ public class MainActivity extends Activity implements OnClickListener,
 		playPauseButton.setBackgroundResource(android.R.drawable.ic_media_play);
 		playPauseButton.setEnabled(true);
 		this.controlsView.setVisibility(View.VISIBLE);
+		this.streamsView.setVisibility(View.VISIBLE);
 		this.loadingView.setVisibility(View.GONE);
 		this.videoView.setVisibility(View.VISIBLE);
+		languageAdapter.clear();
+		subtitleAdapter.clear();
+		for (FFmpegStreamInfo streamInfo : streams) {
+			CodecType mediaType = streamInfo.getMediaType();
+			if (FFmpegStreamInfo.CodecType.AUDIO.equals(mediaType)) {
+				languageAdapter.add(streamInfo);
+			} else if (FFmpegStreamInfo.CodecType.SUBTITLE.equals(mediaType)) {
+				subtitleAdapter.add(streamInfo);
+			}
+		}
 	}
-	
+
 	private void displaySystemMenu(boolean visible) {
 		if (Build.VERSION.SDK_INT >= 14) {
 			displaySystemMenu14(visible);
@@ -219,26 +322,27 @@ public class MainActivity extends Activity implements OnClickListener,
 			displaySystemMenu11(visible);
 		}
 	}
-	
+
 	@SuppressWarnings("deprecation")
 	@TargetApi(11)
 	private void displaySystemMenu11(boolean visible) {
 		if (visible) {
-			this.videoView.setSystemUiVisibility(View.STATUS_BAR_VISIBLE);	
+			this.videoView.setSystemUiVisibility(View.STATUS_BAR_VISIBLE);
 		} else {
-			this.videoView.setSystemUiVisibility(View.STATUS_BAR_HIDDEN);			
+			this.videoView.setSystemUiVisibility(View.STATUS_BAR_HIDDEN);
 		}
 	}
-	
+
 	@TargetApi(14)
 	private void displaySystemMenu14(boolean visible) {
 		if (visible) {
 			this.videoView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
 		} else {
-			this.videoView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE);	
+			this.videoView
+					.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE);
 		}
 	}
-	
+
 	public void resumePause() {
 		this.playPauseButton.setEnabled(false);
 		if (mPlay) {
@@ -252,7 +356,8 @@ public class MainActivity extends Activity implements OnClickListener,
 
 	@Override
 	public void onFFResume(NotPlayingException result) {
-		this.playPauseButton.setBackgroundResource(android.R.drawable.ic_media_pause);
+		this.playPauseButton
+				.setBackgroundResource(android.R.drawable.ic_media_pause);
 		this.playPauseButton.setEnabled(true);
 
 		displaySystemMenu(false);
@@ -261,13 +366,15 @@ public class MainActivity extends Activity implements OnClickListener,
 
 	@Override
 	public void onFFPause(NotPlayingException err) {
-		this.playPauseButton.setBackgroundResource(android.R.drawable.ic_media_play);
+		this.playPauseButton
+				.setBackgroundResource(android.R.drawable.ic_media_play);
 		this.playPauseButton.setEnabled(true);
 		mPlay = false;
 	}
-	
+
 	private void stop() {
 		this.controlsView.setVisibility(View.GONE);
+		this.streamsView.setVisibility(View.GONE);
 		this.loadingView.setVisibility(View.VISIBLE);
 		this.videoView.setVisibility(View.INVISIBLE);
 	}
@@ -299,4 +406,39 @@ public class MainActivity extends Activity implements OnClickListener,
 	public void onStopTrackingTouch(SeekBar seekBar) {
 		mTracking = false;
 	}
+
+	@Override
+	public void onItemSelected(AdapterView<?> parentView,
+			View selectedItemView, int position, long id) {
+		FFmpegStreamInfo streamInfo = (FFmpegStreamInfo) parentView
+				.getItemAtPosition(position);
+		if (parentView == languageSpinner) {
+			if (languageSpinnerSelectedPosition != position) {
+				languageSpinnerSelectedPosition = position;
+				audioStream = streamInfo;
+				play();
+			}
+		} else if (parentView == subtitleSpinner) {
+			if (subtitleSpinnerSelectedPosition != position) {
+				subtitleSpinnerSelectedPosition = position;
+				subtitleStream = streamInfo;
+				play();
+			}
+		} else {
+			throw new RuntimeException();
+		}
+	}
+
+	@Override
+	public void onNothingSelected(AdapterView<?> parentView) {
+		// if (parentView == languageSpinner) {
+		// audioStream = null;
+		// } else if (parentView == subtitleSpinner) {
+		// subtitleStream = null;
+		// } else {
+		// throw new RuntimeException();
+		// }
+		// play();
+	}
+
 }

@@ -38,28 +38,36 @@ typedef QueueCheckFuncRet (*QueueCheckFunc)(Queue *queue, void* check_data,
 Queue *queue_init_with_custom_lock(int size, queue_fill_func fill_func,
 		queue_free_func free_func, void *obj, pthread_mutex_t *custom_lock,
 		pthread_cond_t *custom_cond);
-//Queue *queue_init(int size, queue_fill_func fill_func, queue_free_func free_func, void *obj);
-void queue_free(Queue *queue);
+void queue_free(Queue *queue, pthread_mutex_t * mutex, pthread_cond_t *cond);
 
-void *queue_push_start_already_locked(Queue *queue, int *to_write, QueueCheckFunc func,
+void *queue_push_start_already_locked(Queue *queue, pthread_mutex_t * mutex,
+		pthread_cond_t *cond, int *to_write, QueueCheckFunc func,
 		void *check_data, void *check_ret_data);
-void *queue_push_start(Queue *queue, int *to_write, QueueCheckFunc func,
+void *queue_push_start(Queue *queue, pthread_mutex_t * mutex,
+		pthread_cond_t *cond, int *to_write, QueueCheckFunc func,
 		void *check_data, void *check_ret_data);
-
-void queue_push_finish(Queue *queue, int to_write);
+void queue_push_finish(Queue *queue, pthread_mutex_t * mutex,
+		pthread_cond_t *cond, int to_write);
 
 void *queue_pop_start_already_locked_non_block(Queue *queue);
-void *queue_pop_start_already_locked(Queue *queue, QueueCheckFunc func,
-		void *check_data, void *check_ret_data);
-void *queue_pop_start(Queue *queue, QueueCheckFunc func, void *check_data,
+void *queue_pop_start_already_locked(Queue **queue, pthread_mutex_t * mutex,
+		pthread_cond_t *cond, QueueCheckFunc func, void *check_data,
 		void *check_ret_data);
-void queue_pop_roll_back_already_locked(Queue *queue);
-void queue_pop_roll_back(Queue *queue);
-void queue_pop_finish_already_locked(Queue *queue);
-void queue_pop_finish(Queue *queue);
+void *queue_pop_start(Queue **queue, pthread_mutex_t * mutex,
+		pthread_cond_t *cond, QueueCheckFunc func, void *check_data,
+		void *check_ret_data);
+void queue_pop_roll_back_already_locked(Queue *queue, pthread_mutex_t * mutex,
+		pthread_cond_t *cond);
+void queue_pop_roll_back(Queue *queue, pthread_mutex_t * mutex,
+		pthread_cond_t *cond);
+void queue_pop_finish_already_locked(Queue *queue, pthread_mutex_t * mutex,
+		pthread_cond_t *cond);
+void queue_pop_finish(Queue *queue, pthread_mutex_t * mutex,
+		pthread_cond_t *cond);
 
 int queue_get_size(Queue *queue);
 
-void queue_wait_for(Queue *queue, int size);
+void queue_wait_for(Queue *queue, int size, pthread_mutex_t * mutex,
+		pthread_cond_t *cond);
 
 #endif /* QUEUE_H_ */
