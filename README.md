@@ -1,5 +1,7 @@
 # AndroidFFmpegLibrary
 This project aims to create **working** library providing playing and converting video files in android via ffmpeg libraries.
+
+![Application screenshot](https://lh3.googleusercontent.com/Y_ualK2-gdzG7yGDwf2Q1UOmkEjj2nkVrpH7PHf5jemUtmnZCcidYc3FPUugbokP4M_3tpUZpk-zKoPj)
  
 ## Info
 This project aim to simplify compilation of FFmpeg for android diffrent architecutres to one big apk file.
