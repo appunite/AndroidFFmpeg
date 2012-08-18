@@ -132,7 +132,7 @@ public class MainActivity extends Activity implements OnClickListener,
 		videoView = this.findViewById(R.id.video_view);
 		this.mpegPlayer = new FFmpegPlayer((FFmpegDisplay) videoView, this);
 		this.mpegPlayer.setMpegListener(this);
-		play();
+		setDataSource();
 	}
 
 	private static enum StreamAdapterType {
@@ -204,7 +204,7 @@ public class MainActivity extends Activity implements OnClickListener,
 		stop();
 	}
 
-	private void play() {
+	private void setDataSource() {
 		boolean http = true;
 		boolean encrypted = false;
 		// String video = "trailer.mp4";
@@ -250,6 +250,11 @@ public class MainActivity extends Activity implements OnClickListener,
 		// url = "aes+file://" + videoFile.getAbsolutePath();
 		// dictionary = new HashMap<String, String>();
 		// dictionary.put("aeskey", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+		
+		this.playPauseButton
+		.setBackgroundResource(android.R.drawable.ic_media_play);
+		this.playPauseButton.setEnabled(true);
+		mPlay = false;
 
 		mpegPlayer.setDataSource(url, dictionary, null, audioStream,
 				subtitleStream);
@@ -406,6 +411,13 @@ public class MainActivity extends Activity implements OnClickListener,
 	public void onStopTrackingTouch(SeekBar seekBar) {
 		mTracking = false;
 	}
+	
+	private void setDataSourceAndResumeState() {
+		int progress = seekBar.getProgress();
+		setDataSource();
+		mpegPlayer.seek(progress);
+		mpegPlayer.resume();
+	}
 
 	@Override
 	public void onItemSelected(AdapterView<?> parentView,
@@ -416,13 +428,13 @@ public class MainActivity extends Activity implements OnClickListener,
 			if (languageSpinnerSelectedPosition != position) {
 				languageSpinnerSelectedPosition = position;
 				audioStream = streamInfo;
-				play();
+				setDataSourceAndResumeState();
 			}
 		} else if (parentView == subtitleSpinner) {
 			if (subtitleSpinnerSelectedPosition != position) {
 				subtitleSpinnerSelectedPosition = position;
 				subtitleStream = streamInfo;
-				play();
+				setDataSourceAndResumeState();
 			}
 		} else {
 			throw new RuntimeException();
