@@ -41,9 +41,60 @@
     ((uint16_t *)(d))[0] = (r << 11) | (g << 5) | b;\
 }
 
-
 #define ALPHA_BLEND_RGB(color1, color2, alpha)\
 	(((color1 * (0xff - alpha)) + (color2 * alpha))/0xff)
+
+#define AR(c)  ( (c)>>24)
+#define AG(c)  (((c)>>16)&0xFF)
+#define AB(c)  (((c)>>8) &0xFF)
+#define AA(c)  ((0xFF-c) &0xFF)
+
+void blend_ass_image(AVPicture *dest, const ASS_Image *image, int imgw,
+		int imgh, enum PixelFormat pixel_format) {
+	uint8_t rgba_color[] = { AR(image->color), AG(image->color), AB(
+			image->color), AA(image->color) };
+	uint8_t rect_r, rect_g, rect_b, rect_a;
+	int dest_r, dest_g, dest_b;
+	int x, y;
+	uint16_t *dst2;
+	uint8_t *src, *src2;
+	uint8_t *dst = dest->data[0];
+
+	if (pixel_format != PIX_FMT_RGB565)
+		return;
+
+	dst += image->dst_y * dest->linesize[0] + image->dst_x * 2;
+	src = image->bitmap;
+	for (y = 0; y < image->h; y++) {
+		dst2 = (uint16_t *) dst;
+		src2 = src;
+		for (x = 0; x < image->w; x++) {
+			uint8_t image_pixel = *(src2++);
+			uint16_t *rect_pixel = (dst2++);
+
+			rect_r = image_pixel & rgba_color[0];
+			rect_g = image_pixel & rgba_color[1];
+			rect_b = image_pixel & rgba_color[2];
+			rect_a = image_pixel & rgba_color[3];
+
+			// convert read subtitle RGB888 -> RGB565
+			rect_r = (rect_r >> 3) & 0x1f;
+			rect_g = (rect_g >> 2) & 0x3f;
+			rect_b = (rect_b >> 3) & 0x1f;
+
+			RGB565_IN(dest_r, dest_g, dest_b, rect_pixel);
+
+			// write subtitle on the image
+			dest_r = ALPHA_BLEND_RGB(dest_r, rect_r, rect_a);
+			dest_g = ALPHA_BLEND_RGB(dest_g, rect_g, rect_a);
+			dest_b = ALPHA_BLEND_RGB(dest_b, rect_b, rect_a);
+
+			RGB565_OUT(rect_pixel, dest_r, dest_g, dest_b);
+		}
+		dst += dest->linesize[0];
+		src += image->stride;
+	}
+}
 
 void blend_subrect_rgb(AVPicture *dest, const AVSubtitleRect *rect, int imgw,
 		int imgh, enum PixelFormat pixel_format) {
@@ -54,6 +105,10 @@ void blend_subrect_rgb(AVPicture *dest, const AVSubtitleRect *rect, int imgw,
 	uint8_t *src, *src2;
 	int x, y;
 	uint8_t *dst = dest->data[0];
+
+	if (pixel_format != PIX_FMT_RGB565)
+		return;
+
 	dst += rect->y * dest->linesize[0] + rect->x * 2;
 	src = rect->pict.data[0];
 	pal = (uint32_t *) rect->pict.data[1];
