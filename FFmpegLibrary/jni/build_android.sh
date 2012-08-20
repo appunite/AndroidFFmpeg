@@ -223,7 +223,7 @@ function build_fribidi
 	make -j4 install || exit 1
 	cd ..
 }
-function build_one
+function build_ffmpeg
 {
 	PLATFORM=$NDK/platforms/$PLATFORM_VERSION/arch-$ARCH/
 	CC=$PREBUILT/bin/$EABIARCH-gcc
@@ -241,102 +241,108 @@ EOF
 	cd ffmpeg
 	export PKG_CONFIG_LIBDIR=$(pwd)/$PREFIX/lib/pkgconfig/
 	export PKG_CONFIG_PATH=$(pwd)/$PREFIX/lib/pkgconfig/
-#	./configure --target-os=linux \
-#	    --prefix=$PREFIX \
-#	    --enable-cross-compile \
-#	    --extra-libs="-lgcc" \
-#	    --arch=$ARCH \
-#	    --cc=$CC \
-#	    --cross-prefix=$CROSS_PREFIX \
-#	    --nm=$NM \
-#	    --sysroot=$PLATFORM \
-#	    --extra-cflags=" -O3 -fpic -DANDROID -DHAVE_SYS_UIO_H=1 -Dipv6mr_interface=ipv6mr_ifindex -fasm -Wno-psabi -fno-short-enums  -fno-strict-aliasing -finline-limit=300 $OPTIMIZE_CFLAGS " \
-#	    --disable-shared \
-#	    --enable-static \
-#	    --enable-runtime-cpudetect \
-#	    --extra-ldflags="-Wl,-rpath-link=$PLATFORM/usr/lib -L$PLATFORM/usr/lib  -nostdlib -lc -lm -ldl -llog -L$PREFIX/lib" \
-#	    --extra-cflags="-I$PREFIX/include" \
-#	    --disable-everything \
-#	    --enable-libass \
-#	    --enable-libvo-aacenc \
-#	    --enable-libvo-amrwbenc \
-#	    --enable-hwaccel=h264_vaapi \
-#	    --enable-hwaccel=h264_vaapi \
-#	    --enable-hwaccel=h264_dxva2 \
-#	    --enable-hwaccel=mpeg4_vaapi \
-#	    --enable-demuxer=mov \
-#	    --enable-demuxer=h264 \
-#	    --enable-demuxer=mpegvideo \
-#	    --enable-demuxer=h263 \
-#	    --enable-demuxer=mpegps \
-#	    --enable-demuxer=mjpeg \
-#	    --enable-demuxer=rtsp \
-#	    --enable-demuxer=rtp \
-#	    --enable-demuxer=hls \
-#	    --enable-demuxer=matroska \
-#	    --enable-muxer=rtsp \
-#	    --enable-muxer=mp4 \
-#	    --enable-muxer=mov \
-#	    --enable-muxer=mjpeg \
-#	    --enable-muxer=matroska \
-#	    --enable-protocol=crypto \
-#	    --enable-protocol=jni \
-#	    --enable-protocol=file \
-#	    --enable-protocol=rtp \
-#	    --enable-protocol=tcp \
-#	    --enable-protocol=udp \
-#	    --enable-protocol=applehttp \
-#	    --enable-protocol=hls \
-#	    --enable-protocol=http \
-#	    --enable-decoder=xsub \
-#	    --enable-decoder=jacosub \
-#	    --enable-decoder=dvdsub \
-#	    --enable-decoder=dvbsub \
-#	    --enable-decoder=subviewer \
-#	    --enable-decoder=rawvideo \
-#	    --enable-encoder=rawvideo \
-#	    --enable-decoder=mjpeg \
-#	    --enable-encoder=mjpeg \
-#	    --enable-decoder=h263 \
-#	    --enable-decoder=mpeg4 \
-#	    --enable-encoder=mpeg4 \
-#	    --enable-decoder=h264 \
-#	    --enable-encoder=h264 \
-#	    --enable-decoder=aac \
-#	    --enable-encoder=aac \
-#	    --enable-parser=h264 \
-#	    --enable-encoder=mp2 \
-#	    --enable-decoder=mp2 \
-#	    --enable-encoder=libvo_amrwbenc \
-#	    --enable-decoder=amrwb \
-#	    --enable-muxer=mp2 \
-#	    --enable-decoders \
-#	    --enable-encoders \
-#	    --enable-parsers \
-#	    --enable-hwaccels \
-#	    --enable-muxers \
-#	    --enable-avformat \
-#	    --enable-avcodec \
-#	    --enable-avresample \
-#	    --enable-zlib \
-#	    --disable-doc \
-#	    --disable-ffplay \
-#	    --disable-ffmpeg \
-#	    --disable-ffplay \
-#	    --disable-ffprobe \
-#	    --disable-ffserver \
-#	    --disable-avfilter \
-#	    --disable-avdevice \
-#	    --enable-nonfree \
-#	    --enable-version3 \
-#	    --enable-memalign-hack \
-#	    --enable-asm \
-#	    $ADDITIONAL_CONFIGURE_FLAG \
-#	    || exit 1
-#	make clean || exit 1
-#	make -j4 install || exit 1
+	./configure --target-os=linux \
+	    --prefix=$PREFIX \
+	    --enable-cross-compile \
+	    --extra-libs="-lgcc" \
+	    --arch=$ARCH \
+	    --cc=$CC \
+	    --cross-prefix=$CROSS_PREFIX \
+	    --nm=$NM \
+	    --sysroot=$PLATFORM \
+	    --extra-cflags=" -O3 -fpic -DANDROID -DHAVE_SYS_UIO_H=1 -Dipv6mr_interface=ipv6mr_ifindex -fasm -Wno-psabi -fno-short-enums  -fno-strict-aliasing -finline-limit=300 $OPTIMIZE_CFLAGS " \
+	    --disable-shared \
+	    --enable-static \
+	    --enable-runtime-cpudetect \
+	    --extra-ldflags="-Wl,-rpath-link=$PLATFORM/usr/lib -L$PLATFORM/usr/lib  -nostdlib -lc -lm -ldl -llog -L$PREFIX/lib" \
+	    --extra-cflags="-I$PREFIX/include" \
+	    --disable-everything \
+	    --enable-libass \
+	    --enable-libvo-aacenc \
+	    --enable-libvo-amrwbenc \
+	    --enable-hwaccel=h264_vaapi \
+	    --enable-hwaccel=h264_vaapi \
+	    --enable-hwaccel=h264_dxva2 \
+	    --enable-hwaccel=mpeg4_vaapi \
+	    --enable-demuxer=mov \
+	    --enable-demuxer=h264 \
+	    --enable-demuxer=mpegvideo \
+	    --enable-demuxer=h263 \
+	    --enable-demuxer=mpegps \
+	    --enable-demuxer=mjpeg \
+	    --enable-demuxer=rtsp \
+	    --enable-demuxer=rtp \
+	    --enable-demuxer=hls \
+	    --enable-demuxer=matroska \
+	    --enable-muxer=rtsp \
+	    --enable-muxer=mp4 \
+	    --enable-muxer=mov \
+	    --enable-muxer=mjpeg \
+	    --enable-muxer=matroska \
+	    --enable-protocol=crypto \
+	    --enable-protocol=jni \
+	    --enable-protocol=file \
+	    --enable-protocol=rtp \
+	    --enable-protocol=tcp \
+	    --enable-protocol=udp \
+	    --enable-protocol=applehttp \
+	    --enable-protocol=hls \
+	    --enable-protocol=http \
+	    --enable-decoder=xsub \
+	    --enable-decoder=jacosub \
+	    --enable-decoder=dvdsub \
+	    --enable-decoder=dvbsub \
+	    --enable-decoder=subviewer \
+	    --enable-decoder=rawvideo \
+	    --enable-encoder=rawvideo \
+	    --enable-decoder=mjpeg \
+	    --enable-encoder=mjpeg \
+	    --enable-decoder=h263 \
+	    --enable-decoder=mpeg4 \
+	    --enable-encoder=mpeg4 \
+	    --enable-decoder=h264 \
+	    --enable-encoder=h264 \
+	    --enable-decoder=aac \
+	    --enable-encoder=aac \
+	    --enable-parser=h264 \
+	    --enable-encoder=mp2 \
+	    --enable-decoder=mp2 \
+	    --enable-encoder=libvo_amrwbenc \
+	    --enable-decoder=amrwb \
+	    --enable-muxer=mp2 \
+	    --enable-decoders \
+	    --enable-encoders \
+	    --enable-parsers \
+	    --enable-hwaccels \
+	    --enable-muxers \
+	    --enable-avformat \
+	    --enable-avcodec \
+	    --enable-avresample \
+	    --enable-zlib \
+	    --disable-doc \
+	    --disable-ffplay \
+	    --disable-ffmpeg \
+	    --disable-ffplay \
+	    --disable-ffprobe \
+	    --disable-ffserver \
+	    --disable-avfilter \
+	    --disable-avdevice \
+	    --enable-nonfree \
+	    --enable-version3 \
+	    --enable-memalign-hack \
+	    --enable-asm \
+	    $ADDITIONAL_CONFIGURE_FLAG \
+	    || exit 1
+	make clean || exit 1
+	make -j4 install || exit 1
 
-	$PREBUILT/bin/$EABIARCH-ld -rpath-link=$PLATFORM/usr/lib -L$PLATFORM/usr/lib -L$PREFIX/lib  -soname $SONAME -shared -nostdlib  -z,noexecstack -Bsymbolic --whole-archive --no-undefined -o $OUT_LIBRARY -lavcodec -lavformat -lavresample -lavutil -lswresample -lswscale -lvo-aacenc -lvo-amrwbenc -lc -lm -lz -ldl -llog  --warn-once  --dynamic-linker=/system/bin/linker -zmuldefs $PREBUILT/lib/gcc/$EABIARCH/4.4.3/libgcc.a || exit 1
+	cd ..
+}
+
+function build_one {
+	cd ffmpeg
+	PLATFORM=$NDK/platforms/$PLATFORM_VERSION/arch-$ARCH/
+	$PREBUILT/bin/$EABIARCH-ld -rpath-link=$PLATFORM/usr/lib -L$PLATFORM/usr/lib -L$PREFIX/lib  -soname $SONAME -shared -nostdlib  -z,noexecstack -Bsymbolic --whole-archive --no-undefined -o $OUT_LIBRARY -lavcodec -lavformat -lavresample -lavutil -lswresample -lass -lfreetype -lfribidi -lswscale -lvo-aacenc -lvo-amrwbenc -lc -lm -lz -ldl -llog  --warn-once  --dynamic-linker=/system/bin/linker -zmuldefs $PREBUILT/lib/gcc/$EABIARCH/4.4.3/libgcc.a || exit 1
 	cd ..
 }
 
@@ -356,6 +362,7 @@ build_aac
 build_fribidi
 build_freetype2
 build_ass
+build_ffmpeg
 build_one
 
 #x86
@@ -373,6 +380,7 @@ build_aac
 build_fribidi
 build_freetype2
 build_ass
+build_ffmpeg
 build_one
 
 #mips
@@ -390,6 +398,7 @@ build_aac
 build_fribidi
 build_freetype2
 build_ass
+build_ffmpeg
 build_one
 
 #arm v7vfpv3
@@ -408,6 +417,7 @@ build_aac
 build_fribidi
 build_freetype2
 build_ass
+build_ffmpeg
 build_one
 
 
@@ -428,6 +438,7 @@ build_aac
 build_fribidi
 build_freetype2
 build_ass
+build_ffmpeg
 build_one
 
 #arm v7n
@@ -446,4 +457,5 @@ build_aac
 build_fribidi
 build_freetype2
 build_ass
+build_ffmpeg
 build_one
