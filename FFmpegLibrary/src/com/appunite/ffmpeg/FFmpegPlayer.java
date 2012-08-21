@@ -79,7 +79,7 @@ public class FFmpegPlayer {
 			
 			int err = player.setDataSourceNative(url, map, videoStreamNo, audioStreamNo, subtitleStreamNo);
 			SetDataSourceTaskResult result = new SetDataSourceTaskResult();
-			if (err > 0) {
+			if (err < 0) {
 				result.error = new FFmpegError(err);
 				result.streams = null;
 			} else {
