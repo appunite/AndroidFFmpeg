@@ -1971,8 +1971,7 @@ void player_prepare_ass_decoder_free(struct Player *player) {
 	}
 }
 
-int player_prepare_ass_decoder(struct Player* player) {
-	// TODO check for errors
+int player_prepare_ass_decoder(struct Player* player, const char *font_path) {
 	AVCodecContext* ctx = player->input_codec_ctxs[player->video_stream_no];
 	player->ass_library = ass_library_init();
 	if (player->ass_library == NULL)
@@ -1983,17 +1982,29 @@ int player_prepare_ass_decoder(struct Player* player) {
 	player->ass_renderer = ass_renderer_init(player->ass_library);
 	if (player->ass_renderer == NULL)
 		return -ERROR_COULD_NOT_PREPARE_ASS_RENDERER;
-	ass_set_frame_size(player->ass_renderer, ctx->width, ctx->height);
-	ass_set_fonts(player->ass_renderer, "/sdcard/Roboto.ttf", NULL, 1, NULL, 1);
 
+	ass_set_frame_size(player->ass_renderer, ctx->width, ctx->height);
+	LOGI(3, "player_prepare_ass_decoder: setting ass default font to: %s", font_path);
+	ass_set_fonts(player->ass_renderer, font_path, NULL, 1, NULL, 1);
 	player->ass_track = ass_new_track(player->ass_library);
 	if (player->ass_track == NULL)
 		return -ERROR_COULD_NOT_PREAPARE_ASS_TRACK;
 
+
+	LOGI(3, "player_prepare_ass_decoder #4");
+
 	AVCodecContext* sub_ctx =
 			player->input_codec_ctxs[player->subtitle_stream_no];
-	ass_process_data(player->ass_track, sub_ctx->subtitle_header,
-			sub_ctx->subtitle_header_size);
+
+	LOGI(3, "player_prepare_ass_decoder #5");
+	if (sub_ctx->subtitle_header_size > 13 && sub_ctx->subtitle_header != NULL) {
+		LOGI(3, "player_prepare_ass_decoder #6");
+		if (!strncasecmp(sub_ctx->subtitle_header, "[Script Info]", 13)) {
+			LOGI(3, "player_prepare_ass_decoder #7");
+			ass_process_data(player->ass_track, sub_ctx->subtitle_header,
+					sub_ctx->subtitle_header_size);
+		}
+	}
 
 	return ERROR_NO_ERROR;
 }
@@ -2052,6 +2063,22 @@ int player_set_data_source(struct State *state, const char *file_path,
 	if (player->playing)
 		goto end;
 
+#ifdef SUBTITLES
+	char *font_path = NULL;
+	AVDictionaryEntry *entry = av_dict_get(dictionary, "ass_default_font_path", NULL, 0);
+	if (entry != NULL) {
+		LOGI(3, "ass font found: %s",entry->value);
+		int length = strlen(entry->value);
+		font_path = malloc(sizeof(char) * (length + 1));
+		if (font_path == NULL) {
+			err = ERROR_COULD_NOT_ALLOCATE_MEMORY;
+			goto error;
+		}
+		strcpy(font_path, entry->value);
+		font_path[length] = '\0';
+	}
+#endif // SUBTITLES
+
 	// initial setup
 	player->out_format = PIX_FMT_RGB565;
 	player->pause = TRUE;
@@ -2091,8 +2118,7 @@ int player_set_data_source(struct State *state, const char *file_path,
 	}
 
 	if ((player->subtitle_stream_no >= 0)) {
-		// TODO check for errors
-		err = player_prepare_ass_decoder(player);
+		err = player_prepare_ass_decoder(player, font_path);
 		if (err < 0)
 			goto error;
 	}
@@ -2158,7 +2184,10 @@ int player_set_data_source(struct State *state, const char *file_path,
 	player_find_stream_info_free(player);
 	player_open_input_free(player);
 	player_create_context_free(player);
-
+#ifdef SUBTITLES
+	if (font_path != NULL)
+		free(font_path);
+#endif // SUBTITLES
 	end:
 	LOGI(7, "player_set_data_source end");
 	pthread_mutex_unlock(&player->mutex_operation);

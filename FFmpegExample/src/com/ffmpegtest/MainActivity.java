@@ -205,6 +205,7 @@ public class MainActivity extends Activity implements OnClickListener,
 	}
 
 	private void setDataSource() {
+		HashMap<String, String> dictionary = new HashMap<String, String>();
 		boolean http = true;
 		boolean encrypted = false;
 		// String video = "trailer.mp4";
@@ -233,22 +234,25 @@ public class MainActivity extends Activity implements OnClickListener,
 		// url =
 		// "https://devimages.apple.com.edgekey.net/resources/http-streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8";
 		// // apple advanced
-
-		HashMap<String, String> dictionary = null;
+		
+		// set font for ass
+		File assFont = new File(Environment.getExternalStorageDirectory(),
+				"Roboto.ttf");
+		dictionary.put("ass_default_font_path", assFont.getAbsolutePath());
 
 		// File videoFile = new File(Environment.getExternalStorageDirectory(),
-		// "mission.mp4");
+		// "videos/mission.mp4");
 		// url = "file://" + videoFile.getAbsolutePath();
 
 		File videoFile = new File(Environment.getExternalStorageDirectory(),
-				"james.mkv");
+				"videos/ThreeMenInABoatToSayNothingOfTheDog_RUS_eng_1500.mp4");
+//		File videoFile = new File(Environment.getExternalStorageDirectory(),
+//				"videos/no.mkv");
 		url = "file://" + videoFile.getAbsolutePath();
 
-		//
 		// File videoFile = new File(Environment.getExternalStorageDirectory(),
 		// "encrypted.mp4");
 		// url = "aes+file://" + videoFile.getAbsolutePath();
-		// dictionary = new HashMap<String, String>();
 		// dictionary.put("aeskey", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
 		
 		this.playPauseButton
@@ -390,8 +394,8 @@ public class MainActivity extends Activity implements OnClickListener,
 
 	@Override
 	public void onFFSeeked(NotPlayingException result) {
-		if (result != null)
-			throw new RuntimeException(result);
+//		if (result != null)
+//			throw new RuntimeException(result);
 	}
 
 	@Override
