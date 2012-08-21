@@ -1409,7 +1409,7 @@ int player_find_stream(struct Player *player, enum AVMediaType codec_type,
 	}
 
 	player->caputre_streams_no += 1;
-	return bn_stream;
+	return streams_no;
 }
 
 uint64_t player_find_layout_from_channels(int nb_channels) {
