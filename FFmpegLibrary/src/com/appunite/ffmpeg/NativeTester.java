@@ -24,5 +24,4 @@ public class NativeTester {
 	}
 	
 	native boolean isNeon();
-	native boolean isVfpv3();
 }

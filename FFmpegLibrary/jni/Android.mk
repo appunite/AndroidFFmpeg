@@ -19,7 +19,6 @@ include $(CLEAR_VARS)
 
 #presets - do not tuch this
 FEATURE_NEON:=
-FEATURE_VFPV3:=
 LIBRARY_PROFILER:=
 LIBRARY_YUV2RGB:=
 MODULE_ENCRYPT:=
@@ -34,9 +33,6 @@ MODULE_ENCRYPT:=yes
 ifeq ($(TARGET_ARCH_ABI), armeabi-v7a)
 	# add neon optimization code (only armeabi-v7a)
 	FEATURE_NEON:=yes
-	
-	# add vfpv3-d32 optimization code (only armeabi-v7a)
-	FEATURE_VFPV3:=yes
 else
 
 endif
@@ -84,16 +80,6 @@ ifdef FEATURE_NEON
 	include $(PREBUILT_SHARED_LIBRARY)
 endif
 
-ifdef FEATURE_VFPV3
-	include $(CLEAR_VARS)
-	LOCAL_MODULE := ffmpeg-prebuilt-vfpv3
-	LOCAL_SRC_FILES := ffmpeg-build/$(TARGET_ARCH_ABI)/libffmpeg-vfpv3.so
-	LOCAL_EXPORT_C_INCLUDES := ffmpeg-build/$(TARGET_ARCH_ABI)-vfpv3/include
-	LOCAL_EXPORT_LDLIBS := ffmpeg-build/$(TARGET_ARCH_ABI)/libffmpeg-vfpv3.so
-	LOCAL_PRELINK_MODULE := true
-	include $(PREBUILT_SHARED_LIBRARY)
-endif
-
 
 #ffmpeg-jni library
 include $(CLEAR_VARS)
@@ -107,10 +93,6 @@ LOCAL_SHARED_LIBRARY := ffmpeg-prebuilt
 ifdef LIBRARY_PROFILER
 	LOCAL_CFLAGS += -pg -g -DPROFILER
 	LOCAL_STATIC_LIBRARIES += andprof
-endif
-
-ifdef FEATURE_VFPV3
-	LOCAL_SHARED_LIBRARY += ffmpeg-prebuilt-vfpv3
 endif
 
 ifdef FEATURE_NEON
@@ -132,35 +114,6 @@ endif
 LOCAL_LDLIBS := -llog -ljnigraphics -lz -lm -g $(LOCAL_PATH)/ffmpeg-build/$(TARGET_ARCH_ABI)/libffmpeg.so
 include $(BUILD_SHARED_LIBRARY)
 
-
-ifdef FEATURE_VFPV3
-include $(CLEAR_VARS)
-LOCAL_ALLOW_UNDEFINED_SYMBOLS=false
-LOCAL_MODULE := ffmpeg-jni-vfpv3
-LOCAL_SRC_FILES := ffmpeg-jni.c player.c queue.c helpers.c jni-protocol.c blend.c
-LOCAL_C_INCLUDES := $(LOCAL_PATH)/ffmpeg-build/$(TARGET_ARCH_ABI)/include
-LOCAL_SHARED_LIBRARY := ffmpeg-prebuilt-vfpv3
-
-#if enabled profiler add it
-ifdef LIBRARY_PROFILER
-	LOCAL_CFLAGS += -pg -g -DPROFILER
-	LOCAL_STATIC_LIBRARIES += andprof
-endif
-
-ifdef LIBRARY_YUV2RGB
-	LOCAL_CFLAGS += -DYUV2RGB
-	LOCAL_STATIC_LIBRARIES += yuv2rgb
-endif
-
-ifdef MODULE_ENCRYPT
-	LOCAL_CFLAGS += -DMODULE_ENCRYPT
-	LOCAL_SRC_FILES += aes-protocol.c
-	LOCAL_C_INCLUDES += $(LOCAL_PATH)/tropicssl/include
-	LOCAL_STATIC_LIBRARIES += tropicssl
-endif
-LOCAL_LDLIBS := -llog -ljnigraphics -lz -lm -g $(LOCAL_PATH)/ffmpeg-build/$(TARGET_ARCH_ABI)/libffmpeg-vfpv3.so
-include $(BUILD_SHARED_LIBRARY)
-endif
 
 ifdef FEATURE_NEON
 include $(CLEAR_VARS)

@@ -181,10 +181,7 @@ public class FFmpegPlayer {
 
 	static {
 		NativeTester nativeTester = new NativeTester();
-		if (nativeTester.isVfpv3()) {
-			System.loadLibrary("ffmpeg-vfpv3");
-			System.loadLibrary("ffmpeg-jni-vfpv3");
-		} else if (nativeTester.isNeon()) {
+		if (nativeTester.isNeon()) {
 			System.loadLibrary("ffmpeg-neon");
 			System.loadLibrary("ffmpeg-jni-neon");
 		} else {

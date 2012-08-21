@@ -22,12 +22,10 @@
 static const char *nativetester_class_path_name = "com/appunite/ffmpeg/NativeTester";
 
 jboolean jni_nativetester_is_neon(JNIEnv *env, jobject thiz);
-jboolean jni_nativetester_is_vfpv3(JNIEnv *env, jobject thiz);
 
 
 static JNINativeMethod nativetester_methods[] = {
 		{"isNeon", "()Z", (void*) jni_nativetester_is_neon},
-		{"isVfpv3", "()Z", (void*) jni_nativetester_is_vfpv3},
 };
 
 #endif /* NATIVETESTER_H_ */

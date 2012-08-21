@@ -420,28 +420,7 @@ build_ass
 build_ffmpeg
 build_one
 
-
-
-#arm v7vfpv3-32
-EABIARCH=arm-linux-androideabi
-ARCH=arm
-CPU=armv7-a
-OPTIMIZE_CFLAGS="-mfloat-abi=softfp -mfpu=vfpv3 -marm -march=$CPU "
-PREFIX=../ffmpeg-build/armeabi-v7a-vfpv3
-OUT_LIBRARY=../ffmpeg-build/armeabi-v7a/libffmpeg-vfpv3.so
-ADDITIONAL_CONFIGURE_FLAG=
-SONAME=libffmpeg-vfpv3.so
-PREBUILT=$NDK/toolchains/arm-linux-androideabi-4.4.3/prebuilt/$OS-x86
-PLATFORM_VERSION=android-9
-build_amr
-build_aac
-build_fribidi
-build_freetype2
-build_ass
-build_ffmpeg
-build_one
-
-#arm v7n
+#arm v7 + neon (neon also include vfpv3-32)
 EABIARCH=arm-linux-androideabi
 ARCH=arm
 CPU=armv7-a
