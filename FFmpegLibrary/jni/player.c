@@ -1683,7 +1683,8 @@ int player_preapre_sws_context(struct Player *player) {
 			destWidth, destHeight, player->out_format, SWS_BICUBIC, NULL, NULL,
 			NULL);
 	if (player->sws_context == NULL) {
-		LOGE(1, "could not initialize conversion context\n");
+		LOGE(1, "could not initialize conversion context from: %d"
+				", to :%d\n", ctx->pix_fmt, player->out_format);
 		return -ERROR_COULD_NOT_GET_SWS_CONTEXT;
 	}
 	return 0;
