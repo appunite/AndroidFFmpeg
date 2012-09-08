@@ -366,7 +366,7 @@ build_ffmpeg
 build_one
 
 #x86
-EABIARCH=i686-android-linux
+EABIARCH=i686-linux-android
 ARCH=x86
 OPTIMIZE_CFLAGS="-m32"
 PREFIX=../ffmpeg-build/x86
