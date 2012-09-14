@@ -64,7 +64,7 @@
 #define FALSE 0
 #define TRUE (!(FALSE))
 
-#define SUBTITLES
+//#define SUBTITLES
 
 #ifdef SUBTITLES
 #include "blend.h"

@@ -332,6 +332,7 @@ public class FFmpegPlayer {
 			} else {
 				channelConfig = AudioFormat.CHANNEL_OUT_STEREO;
 			}
+
 			try {
 				int minBufferSize = AudioTrack.getMinBufferSize(sampleRateInHz,
 						channelConfig, AudioFormat.ENCODING_PCM_16BIT);
