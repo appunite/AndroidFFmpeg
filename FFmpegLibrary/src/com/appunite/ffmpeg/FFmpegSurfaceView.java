@@ -123,7 +123,7 @@ public class FFmpegSurfaceView extends SurfaceView implements FFmpegDisplay,
 								canvas.restore();
 		
 								String fps = fpsCounter.tick();
-								canvas.drawText(fps, 40 - moveX, 40 - moveY, mPaint);
+							//	canvas.drawText(fps, 40 - moveX, 40 - moveY, mPaint);
 							} finally {
 								mSurfaceHolder.unlockCanvasAndPost(canvas);
 							}
