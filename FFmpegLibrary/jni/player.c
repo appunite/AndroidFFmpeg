@@ -732,34 +732,37 @@ int player_decode_video(struct DecoderData * decoder_data, JNIEnv * env,
 #endif
 
 #ifdef SUBTITLES
-/* libass stores an RGBA color in the format RRGGBBTT, where TT is the transparency level */
+	if ((player->subtitle_stream_no >= 0)) {
 
-	if (subtitle != NULL) {
-		LOGI(5, "player_decode_video blend subtitle");
-		int i;
-		struct AVSubtitle *sub = &subtitle->subtitle;
-		for (i = 0; i < sub->num_rects; i++) {
-			AVSubtitleRect *rect = sub->rects[i];
-			if (rect->type != SUBTITLE_BITMAP)
-				continue;
-			blend_subrect_rgb((AVPicture *) rgbFrame, rect, destWidth,
+		/* libass stores an RGBA color in the format RRGGBBAA,
+		 * where AA is the transparency level */
+		if (subtitle != NULL) {
+			LOGI(5, "player_decode_video blend subtitle");
+			int i;
+			struct AVSubtitle *sub = &subtitle->subtitle;
+			for (i = 0; i < sub->num_rects; i++) {
+				AVSubtitleRect *rect = sub->rects[i];
+				if (rect->type != SUBTITLE_BITMAP)
+					continue;
+				blend_subrect_rgb((AVPicture *) rgbFrame, rect, destWidth,
+						destHeight, player->out_format);
+			}
+		}
+		double time_ms = time * 1000;
+
+		LOGI(3,
+				"player_decode_video_subtitles: trying to find subtitles in : %f", time_ms);
+		pthread_mutex_lock(&player->mutex_ass);
+		ASS_Image *image = ass_render_frame(player->ass_renderer,
+				player->ass_track, time_ms, NULL);
+		for (; image != NULL; image = image->next) {
+			LOGI(3,
+					"player_decode_video_subtitles: printing subtitles in : %f", time_ms);
+			blend_ass_image((AVPicture *) rgbFrame, image, destWidth,
 					destHeight, player->out_format);
 		}
+		pthread_mutex_unlock(&player->mutex_ass);
 	}
-	double time_ms = time * 1000;
-
-	LOGI(3, "player_decode_video_subtitles: trying to find subtitles in : %f", time_ms);
-	pthread_mutex_lock(&player->mutex_ass);
-	ASS_Image *image = ass_render_frame(player->ass_renderer, player->ass_track,
-	                                        time_ms, NULL);
-	for (; image != NULL; image = image->next) {
-		LOGI(3,
-				"player_decode_video_subtitles: printing subtitles in : %f", time_ms);
-		blend_ass_image((AVPicture *) rgbFrame, image, destWidth, destHeight,
-				player->out_format);
-	}
-	pthread_mutex_unlock(&player->mutex_ass);
-
 #endif // SUBTITLES
 	AndroidBitmap_unlockPixels(env, elem->jbitmap);
 
