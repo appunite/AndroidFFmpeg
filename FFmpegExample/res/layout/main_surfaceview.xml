@@ -4,12 +4,6 @@
     android:layout_width="fill_parent"
     android:layout_height="fill_parent" >
 
-    <com.appunite.ffmpeg.FFmpegSurfaceView
-        android:id="@+id/video_view"
-        android:layout_width="fill_parent"
-        android:layout_height="fill_parent"
-        android:visibility="invisible" />
-
     <LinearLayout
         android:id="@+id/streams"
         android:layout_width="match_parent"
@@ -60,6 +54,14 @@
             android:layout_centerVertical="true"
             android:layout_toRightOf="@+id/play_pause" />
     </RelativeLayout>
+    
+    <com.appunite.ffmpeg.FFmpegSurfaceView
+        android:id="@+id/video_view"
+        android:layout_below="@+id/streams"
+        android:layout_above="@+id/controls"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:visibility="invisible" />
 
     <ProgressBar
         android:id="@+id/loading_view"
