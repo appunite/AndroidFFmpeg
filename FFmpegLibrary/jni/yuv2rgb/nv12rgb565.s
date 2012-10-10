@@ -1,21 +1,12 @@
-@ YUV-> RGB conversion code Copyright (C) 2008 Robin Watts (robin;wss.co.uk).
+@ YUV-> RGB conversion code.
 @
-@ Licensed under the GPL. If you need it under another license, contact me
-@ and ask.
+@ Copyright (C) 2011 Robin Watts (robin at wss.co.uk) for Pinknoise
+@ Productions Ltd.
+@ Copyright (C) 2012 Jacek Marchwicki (jacek.marchwicki@gmail.com)
+@ 	converted from Robin Watts yuv420rgb565.s
 @
-@  This program is free software ; you can redistribute it and/or modify
-@  it under the terms of the GNU General Public License as published by
-@  the Free Software Foundation ; either version 2 of the License, or
-@  (at your option) any later version.
-@
-@  This program is distributed in the hope that it will be useful,
-@  but WITHOUT ANY WARRANTY ; without even the implied warranty of
-@  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-@  GNU General Public License for more details.
-@
-@  You should have received a copy of the GNU General Public License
-@  along with this program ; if not, write to the Free Software
-@  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+@ Licensed under the BSD license. See 'COPYING' for details of
+@ (non-)warranty.
 @
 @
 @ The algorithm used here is based heavily on one created by Sophie Wilson
@@ -29,7 +20,7 @@
 @ G = CLAMP((Y-16)*1.164 - 0.391*U - 0.813*V)
 @ B = CLAMP((Y-16)*1.164 + 2.018*U          )
 @
-@ Were going to bend that here as follows:
+@ We're going to bend that here as follows:
 @
 @ R = CLAMP(y +           1.596*V)
 @ G = CLAMP(y - 0.383*U - 0.813*V)
@@ -44,8 +35,8 @@
 @ shrink the G_U factor in line with that to avoid a colour shift as much as
 @ possible.
 @
-@ Were going to use tables to do it faster, but rather than doing it using
-@ 5 tables as as the above suggests, were going to do it using just 3.
+@ We're going to use tables to do it faster, but rather than doing it using
+@ 5 tables as as the above suggests, we're going to do it using just 3.
 @
 @ We do this by working in parallel within a 32 bit word, and using one
 @ table each for Y U and V.
@@ -81,10 +72,10 @@
 @ Theorarm library
 @ Copyright (C) 2009 Robin Watts for Pinknoise Productions Ltd
 
-    .text
+	.text
 
-	.global	yuv420_2_rgb565
-	.global	yuv420_2_rgb565_PROFILE
+	.global	nv12_2_rgb565
+	.global	nv12_2_rgb565_PROFILE
 
 @ void yuv420_2_rgb565
 @  uint8_t *dst_ptr
@@ -102,12 +93,12 @@
  .set DITH1,	7
  .set DITH2,	6
 
-yuv420_2_rgb565_PROFILE:		@ Symbol exposed for profiling purposes
+nv12_2_rgb565_PROFILE:		@ Symbol exposed for profiling purposes
 CONST_mask:
 	.word	0x07E0F81F
 CONST_flags:
 	.word	0x40080100
-yuv420_2_rgb565:
+nv12_2_rgb565:
 	@ r0 = dst_ptr
 	@ r1 = y_ptr
 	@ r2 = u_ptr
@@ -145,8 +136,8 @@ yloop1:
 	ADDS	r8, r8, #1<<16		@ if (width == 1)
 	BGE	trail_pair1		@    just do 1 column
 xloop1:
-	LDRB	r11,[r2], #1		@ r11 = u  = *u_ptr++
-	LDRB	r12,[r3], #1		@ r12 = v  = *v_ptr++
+	LDRB	r11,[r2], #2		@ r11 = u  = *(u_ptr+2)
+	LDRB	r12,[r3], #2		@ r12 = v  = *(v_ptr+2)
 	LDRB	r7, [r1, r10]		@ r7  = y2 = y_ptr[stride]
 	LDRB	r6, [r1], #1		@ r6  = y0 = *y_ptr++
 	ADD	r11,r11,#256
@@ -201,8 +192,8 @@ end_xloop1:
 	ADD	r1, r1, r10,LSL #1
 	SUB	r0, r0, r11,LSL #1
 	SUB	r1, r1, r11
-	SUB	r2, r2, r11,LSR #1
-	SUB	r3, r3, r11,LSR #1
+	SUB	r2, r2, r11
+	SUB	r3, r3, r11
 	ADD	r2, r2, r12
 	ADD	r3, r3, r12
 
@@ -216,8 +207,8 @@ trail_row1:
 	ADDS	r8, r8, #1<<16		@ if (width == 1)
 	BGE	trail_pix1		@    just do 1 pixel
 xloop12:
-	LDRB	r11,[r2], #1		@ r11 = u  = *u_ptr++
-	LDRB	r12,[r3], #1		@ r12 = v  = *v_ptr++
+	LDRB	r11,[r2], #2		@ r11 = u  = *(u_ptr+2)
+	LDRB	r12,[r3], #2		@ r12 = v  = *(v_ptr+2)
 	LDRB	r6, [r1], #1		@ r6  = y0 = *y_ptr++
 	LDRB	r7, [r1], #1		@ r7  = y1 = *y_ptr++
 	ADD	r11,r11,#256
@@ -251,8 +242,8 @@ end:
 	LDMFD	r13!,{r4-r11,pc}
 trail_pix1:
 	@ We have a single extra pixel to do
-	LDRB	r11,[r2], #1		@ r11 = u  = *u_ptr++
-	LDRB	r12,[r3], #1		@ r12 = v  = *v_ptr++
+	LDRB	r11,[r2], #2		@ r11 = u  = *(u_ptr+2)
+	LDRB	r12,[r3], #2		@ r12 = v  = *(v_ptr+2)
 	LDRB	r6, [r1], #1		@ r6  = y0 = *y_ptr++
 	ADD	r11,r11,#256
 	ADD	r12,r12,#512
@@ -274,8 +265,8 @@ return105:
 
 trail_pair1:
 	@ We have a pair of pixels left to do
-	LDRB	r11,[r2]		@ r11 = u  = *u_ptr++
-	LDRB	r12,[r3]		@ r12 = v  = *v_ptr++
+	LDRB	r11,[r2], #2		@ r11 = u  = *(u_ptr+2)
+	LDRB	r12,[r3], #2		@ r12 = v  = *(v_ptr+2)
 	LDRB	r7, [r1, r10]		@ r7  = y2 = y_ptr[stride]
 	LDRB	r6, [r1], #1		@ r6  = y0 = *y_ptr++
 	ADD	r11,r11,#256
@@ -379,8 +370,8 @@ yloop0:
 	ADDS	r8, r8, #1<<16		@ if (width == 1)
 	BGE	trail_pair0		@    just do 1 column
 xloop0:
-	LDRB	r11,[r2], #1		@ r11 = u  = *u_ptr++
-	LDRB	r12,[r3], #1		@ r12 = v  = *v_ptr++
+	LDRB	r11,[r2], #2		@ r11 = u  = *(u_ptr+2)
+	LDRB	r12,[r3], #2		@ r12 = v  = *(v_ptr+2)
 	LDRB	r7, [r1, r10]		@ r7  = y2 = y_ptr[stride]
 	LDRB	r6, [r1], #1		@ r6  = y0 = *y_ptr++
 	ADD	r11,r11,#256
@@ -435,8 +426,8 @@ end_xloop0:
 	SUB	r0, r0, r11,LSL #1
 	ADD	r1, r1, r10,LSL #1
 	SUB	r1, r1, r11
-	SUB	r2, r2, r11,LSR #1
-	SUB	r3, r3, r11,LSR #1
+	SUB	r2, r2, r11
+	SUB	r3, r3, r11
 	ADD	r2, r2, r12
 	ADD	r3, r3, r12
 
@@ -450,8 +441,8 @@ trail_row0:
 	ADDS	r8, r8, #1<<16		@ if (width == 1)
 	BGE	trail_pix0		@    just do 1 pixel
 xloop02:
-	LDRB	r11,[r2], #1		@ r11 = u  = *u_ptr++
-	LDRB	r12,[r3], #1		@ r12 = v  = *v_ptr++
+	LDRB	r11,[r2], #2		@ r11 = u  = *(u_ptr+2)
+	LDRB	r12,[r3], #2		@ r12 = v  = *(v_ptr+2)
 	LDRB	r6, [r1], #1		@ r6  = y0 = *y_ptr++
 	LDRB	r7, [r1], #1		@ r7  = y1 = *y_ptr++
 	ADD	r11,r11,#256
@@ -485,8 +476,8 @@ return004:
 	LDMFD	r13!,{r4-r11,pc}
 trail_pix0:
 	@ We have a single extra pixel to do
-	LDRB	r11,[r2], #1		@ r11 = u  = *u_ptr++
-	LDRB	r12,[r3], #1		@ r12 = v  = *v_ptr++
+	LDRB	r11,[r2], #2		@ r11 = u  = *(u_ptr+2)
+	LDRB	r12,[r3], #2		@ r12 = v  = *(v_ptr+2)
 	LDRB	r6, [r1], #1		@ r6  = y0 = *y_ptr++
 	ADD	r11,r11,#256
 	ADD	r12,r12,#512
@@ -508,8 +499,8 @@ return005:
 
 trail_pair0:
 	@ We have a pair of pixels left to do
-	LDRB	r11,[r2]		@ r11 = u  = *u_ptr++
-	LDRB	r12,[r3]		@ r12 = v  = *v_ptr++
+	LDRB	r11,[r2], #2		@ r11 = u  = *(u_ptr+2)
+	LDRB	r12,[r3], #2		@ r12 = v  = *(v_ptr+2)
 	LDRB	r7, [r1, r10]		@ r7  = y2 = y_ptr[stride]
 	LDRB	r6, [r1], #1		@ r6  = y0 = *y_ptr++
 	ADD	r11,r11,#256
@@ -612,8 +603,8 @@ yloop2:
 	ADDS	r8, r8, #1<<16		@ if (width == 1)
 	BGE	trail_pair2		@    just do 1 column
 xloop2:
-	LDRB	r11,[r2], #1		@ r11 = u  = *u_ptr++
-	LDRB	r12,[r3], #1		@ r12 = v  = *v_ptr++
+	LDRB	r11,[r2], #2		@ r11 = u  = *(u_ptr+2)
+	LDRB	r12,[r3], #2		@ r12 = v  = *(v_ptr+2)
 	LDRB	r7, [r1, r10]		@ r7  = y2 = y_ptr[stride]
 	LDRB	r6, [r1], #1		@ r6  = y0 = *y_ptr++
 	ADD	r11,r11,#256
@@ -668,8 +659,8 @@ end_xloop2:
 	ADD	r1, r1, r10,LSL #1
 	SUB	r0, r0, r11,LSL #1
 	SUB	r1, r1, r11
-	SUB	r2, r2, r11,LSR #1
-	SUB	r3, r3, r11,LSR #1
+	SUB	r2, r2, r11
+	SUB	r3, r3, r11
 	ADD	r2, r2, r12
 	ADD	r3, r3, r12
 
@@ -683,8 +674,8 @@ trail_row2:
 	ADDS	r8, r8, #1<<16		@ if (width == 1)
 	BGE	trail_pix2		@    just do 1 pixel
 xloop22:
-	LDRB	r11,[r2], #1		@ r11 = u  = *u_ptr++
-	LDRB	r12,[r3], #1		@ r12 = v  = *v_ptr++
+	LDRB	r11,[r2], #2		@ r11 = u  = *(u_ptr+2)
+	LDRB	r12,[r3], #2		@ r12 = v  = *(v_ptr+2)
 	LDRB	r6, [r1], #1		@ r6  = y0 = *y_ptr++
 	LDRB	r7, [r1], #1		@ r7  = y1 = *y_ptr++
 	ADD	r11,r11,#256
@@ -718,8 +709,8 @@ return204:
 	LDMFD	r13!,{r4-r11,pc}
 trail_pix2:
 	@ We have a single extra pixel to do
-	LDRB	r11,[r2], #1		@ r11 = u  = *u_ptr++
-	LDRB	r12,[r3], #1		@ r12 = v  = *v_ptr++
+	LDRB	r11,[r2], #2		@ r11 = u  = *(u_ptr+2)
+	LDRB	r12,[r3], #2		@ r12 = v  = *(v_ptr+2)
 	LDRB	r6, [r1], #1		@ r6  = y0 = *y_ptr++
 	ADD	r11,r11,#256
 	ADD	r12,r12,#512
@@ -741,8 +732,8 @@ return205:
 
 trail_pair2:
 	@ We have a pair of pixels left to do
-	LDRB	r11,[r2]		@ r11 = u  = *u_ptr++
-	LDRB	r12,[r3]		@ r12 = v  = *v_ptr++
+	LDRB	r11,[r2], #2		@ r11 = u  = *(u_ptr+2)
+	LDRB	r12,[r3], #2		@ r12 = v  = *(v_ptr+2)
 	LDRB	r7, [r1, r10]		@ r7  = y2 = y_ptr[stride]
 	LDRB	r6, [r1], #1		@ r6  = y0 = *y_ptr++
 	ADD	r11,r11,#256
@@ -845,8 +836,8 @@ yloop3:
 	ADDS	r8, r8, #1<<16		@ if (width == 1)
 	BGE	trail_pair3		@    just do 1 column
 xloop3:
-	LDRB	r11,[r2], #1		@ r11 = u  = *u_ptr++
-	LDRB	r12,[r3], #1		@ r12 = v  = *v_ptr++
+	LDRB	r11,[r2], #2		@ r11 = u  = *(u_ptr+2)
+	LDRB	r12,[r3], #2		@ r12 = v  = *(v_ptr+2)
 	LDRB	r7, [r1, r10]		@ r7  = y2 = y_ptr[stride]
 	LDRB	r6, [r1], #1		@ r6  = y0 = *y_ptr++
 	ADD	r11,r11,#256
@@ -901,8 +892,8 @@ end_xloop3:
 	SUB	r0, r0, r11,LSL #1
 	ADD	r1, r1, r10,LSL #1
 	SUB	r1, r1, r11
-	SUB	r2, r2, r11,LSR #1
-	SUB	r3, r3, r11,LSR #1
+	SUB	r2, r2, r11
+	SUB	r3, r3, r11
 	ADD	r2, r2, r12
 	ADD	r3, r3, r12
 
@@ -916,8 +907,8 @@ trail_row3:
 	ADDS	r8, r8, #1<<16		@ if (width == 1)
 	BGE	trail_pix3		@    just do 1 pixel
 xloop32:
-	LDRB	r11,[r2], #1		@ r11 = u  = *u_ptr++
-	LDRB	r12,[r3], #1		@ r12 = v  = *v_ptr++
+	LDRB	r11,[r2], #2		@ r11 = u  = *(u_ptr+2)
+	LDRB	r12,[r3], #2		@ r12 = v  = *(v_ptr+2)
 	LDRB	r6, [r1], #1		@ r6  = y0 = *y_ptr++
 	LDRB	r7, [r1], #1		@ r7  = y1 = *y_ptr++
 	ADD	r11,r11,#256
@@ -951,8 +942,8 @@ return304:
 	LDMFD	r13!,{r4-r11,pc}
 trail_pix3:
 	@ We have a single extra pixel to do
-	LDRB	r11,[r2], #1		@ r11 = u  = *u_ptr++
-	LDRB	r12,[r3], #1		@ r12 = v  = *v_ptr++
+	LDRB	r11,[r2], #2		@ r11 = u  = *(u_ptr+2)
+	LDRB	r12,[r3], #2		@ r12 = v  = *(v_ptr+2)
 	LDRB	r6, [r1], #1		@ r6  = y0 = *y_ptr++
 	ADD	r11,r11,#256
 	ADD	r12,r12,#512
@@ -975,8 +966,8 @@ return305:
 
 trail_pair3:
 	@ We have a pair of pixels left to do
-	LDRB	r11,[r2]		@ r11 = u  = *u_ptr++
-	LDRB	r12,[r3]		@ r12 = v  = *v_ptr++
+	LDRB	r11,[r2], #2		@ r11 = u  = *(u_ptr+2)
+	LDRB	r12,[r3], #2		@ r12 = v  = *(v_ptr+2)
 	LDRB	r7, [r1, r10]		@ r7  = y2 = y_ptr[stride]
 	LDRB	r6, [r1], #1		@ r6  = y0 = *y_ptr++
 	ADD	r11,r11,#256
@@ -1066,5 +1057,3 @@ fix305:
 	BIC	r12,r5, r6, LSR #1	@ r12 = .o......o......o......
 	ADD	r6, r6, r12,LSR #8	@ r6  = fixed value
 	B	return305
-
-	@ END

@@ -816,16 +816,27 @@ int player_decode_video(struct DecoderData * decoder_data, JNIEnv * env,
 
 	LOGI(7, "player_decode_video copying...");
 #ifdef YUV2RGB
-	yuv420_2_rgb565(rgbFrame->data[0], frame->data[0], frame->data[1],
-			frame->data[2], destWidth, destHeight, frame->linesize[0],
-			frame->linesize[1], destWidth << 1, yuv2rgb565_table,
-			player->dither++);
-#else
-	sws_scale(player->sws_context,
-			(const uint8_t * const *) frame->data,
-			frame->linesize, 0, ctx->height,
-			rgbFrame->data, rgbFrame->linesize);
+	if (ctx->pix_fmt == PIX_FMT_YUV420P) {
+		LOGI(9, "Using yuv420_2_rgb565");
+		yuv420_2_rgb565(rgbFrame->data[0], frame->data[0], frame->data[1],
+				frame->data[2], destWidth, destHeight, frame->linesize[0],
+				frame->linesize[1], destWidth << 1, yuv2rgb565_table,
+				player->dither++);
+	} else if (ctx->pix_fmt == PIX_FMT_NV12) {
+		LOGI(9, "Using nv12_2_rgb565");
+		nv12_2_rgb565(rgbFrame->data[0], frame->data[0], frame->data[1],
+						frame->data[1]+1, destWidth, destHeight, frame->linesize[0],
+						frame->linesize[1], destWidth << 1, yuv2rgb565_table,
+						player->dither++);
+	} else
 #endif
+	{
+		LOGI(9, "Using sws_scale");
+		sws_scale(player->sws_context,
+				(const uint8_t * const *) frame->data,
+				frame->linesize, 0, ctx->height,
+				rgbFrame->data, rgbFrame->linesize);
+	}
 #ifdef MEASURE_TIME
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &timespec2);
 		diff = timespec_diff(timespec1, timespec2);
