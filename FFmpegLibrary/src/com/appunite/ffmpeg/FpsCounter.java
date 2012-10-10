@@ -34,16 +34,15 @@ public class FpsCounter {
 	public String tick() {
 		if (this.start) {
 			this.start = false;
-			this.startTime = System.currentTimeMillis();
+			this.startTime = System.nanoTime();
 		}
 		if (this.counter++ < this.frameCount) {
 			return this.tick;
 		}
 
-		long stopTime = System.currentTimeMillis();
-		float fps =
-				(float) this.frameCount / (float) (stopTime - this.startTime)
-						* 1000.0f;
+		long stopTime = System.nanoTime();
+		double fps =
+				(double) this.frameCount * (1000.0 * 1000.0 * 1000.0) / (double) (stopTime - this.startTime);
 		this.startTime = stopTime;
 		this.counter = 0;
 
