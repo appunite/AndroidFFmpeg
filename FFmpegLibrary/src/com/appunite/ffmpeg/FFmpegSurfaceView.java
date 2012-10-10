@@ -108,6 +108,7 @@ public class FFmpegSurfaceView extends SurfaceView implements FFmpegDisplay,
 							if (canvas == null)
 								return;
 							try {
+								canvas.drawColor(Color.BLACK);
 								canvas.save();
 								float ratiow = mSurfaceWidth
 										/ (float) renderFrame.width;
