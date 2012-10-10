@@ -60,6 +60,7 @@
 #define LOG_TAG "player.c"
 #define LOGI(level, ...) if (level <= LOG_LEVEL) {__android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__);}
 #define LOGE(level, ...) if (level <= LOG_LEVEL) {__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__);}
+#define LOGW(level, ...) if (level <= LOG_LEVEL) {__android_log_print(ANDROID_LOG_WARN, LOG_TAG, __VA_ARGS__);}
 
 #define FALSE 0
 #define TRUE (!(FALSE))
@@ -76,6 +77,26 @@
 #define MIN_SLEEP_TIME_US 10000
 // 10000 ms = 1s
 #define MIN_SLEEP_TIME_MS 2
+
+#define MEASURE_TIME
+
+#ifdef MEASURE_TIME
+struct timespec render_frame_start, render_frame_stop;
+
+// http://www.guyrutenberg.com/2007/09/22/profiling-code-using-clock_gettime/
+struct timespec timespec_diff(struct timespec start, struct timespec end)
+{
+	struct timespec temp;
+	if ((end.tv_nsec-start.tv_nsec)<0) {
+		temp.tv_sec = end.tv_sec-start.tv_sec-1;
+		temp.tv_nsec = 1000000000+end.tv_nsec-start.tv_nsec;
+	} else {
+		temp.tv_sec = end.tv_sec-start.tv_sec;
+		temp.tv_nsec = end.tv_nsec-start.tv_nsec;
+	}
+	return temp;
+}
+#endif // MEASURE_TIME
 
 void player_print_codec_description(AVCodec *codec) {
 	char *type = "???";
@@ -618,9 +639,25 @@ int player_decode_video(struct DecoderData * decoder_data, JNIEnv * env,
 	AVStream * stream = player->input_streams[stream_no];
 	int interrupt_ret;
 
+#ifdef MEASURE_TIME
+	struct timespec timespec1, timespec2, diff;
+#endif // MEASURE_TIME
+
 	LOGI(10, "player_decode_video decoding");
 	int frameFinished;
+
+#ifdef MEASURE_TIME
+	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &timespec1);
+#endif // MEASURE_TIME
+
 	int ret = avcodec_decode_video2(ctx, frame, &frameFinished, packet);
+
+#ifdef MEASURE_TIME
+	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &timespec2);
+	diff = timespec_diff(timespec1, timespec2);
+	LOGI(7, "decode_video timediff: %d.%9ld",diff.tv_sec, diff.tv_nsec);
+#endif // MEASURE_TIME
+
 
 	if (ret < 0) {
 		LOGE(1, "player_decode_video Fail decoding video %d\n", ret);
@@ -645,6 +682,10 @@ int player_decode_video(struct DecoderData * decoder_data, JNIEnv * env,
 	int to_write;
 	struct VideoRGBFrameElem * elem;
 
+#ifdef MEASURE_TIME
+		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &timespec1);
+#endif // MEASURE_TIME
+
 	pthread_mutex_lock(&player->mutex_queue);
 	push: elem = queue_push_start_already_locked(player->rgb_video_frames,
 			&player->mutex_queue, &player->cond_queue, &to_write,
@@ -663,6 +704,13 @@ int player_decode_video(struct DecoderData * decoder_data, JNIEnv * env,
 			assert(FALSE);
 		}
 	}
+
+#ifdef MEASURE_TIME
+		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &timespec2);
+		diff = timespec_diff(timespec1, timespec2);
+		LOGI(7, "wait timediff: %d.%9ld",diff.tv_sec, diff.tv_nsec);
+#endif // MEASURE_TIME
+
 #ifdef SUBTITLES
 	struct SubtitleElem * subtitle = NULL;
 	if (player->subtitle_stream_no >= 0) {
@@ -708,6 +756,9 @@ int player_decode_video(struct DecoderData * decoder_data, JNIEnv * env,
 	int destWidth = ctx->width;
 	int destHeight = ctx->height;
 	int err = 0;
+#ifdef MEASURE_TIME
+		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &timespec1);
+#endif // MEASURE_TIME
 
 	if ((ret = AndroidBitmap_lockPixels(env, elem->jbitmap, &buffer)) < 0) {
 		LOGE(1, "AndroidBitmap_lockPixels() failed ! error=%d", ret);
@@ -717,6 +768,16 @@ int player_decode_video(struct DecoderData * decoder_data, JNIEnv * env,
 
 	avpicture_fill((AVPicture *) elem->frame, buffer, player->out_format,
 			destWidth, destHeight);
+
+#ifdef MEASURE_TIME
+		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &timespec2);
+		diff = timespec_diff(timespec1, timespec2);
+		LOGI(7, "lockPixels and fillimage timediff: %d.%9ld",diff.tv_sec, diff.tv_nsec);
+#endif // MEASURE_TIME
+
+#ifdef MEASURE_TIME
+		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &timespec1);
+#endif // MEASURE_TIME
 
 	LOGI(7, "player_decode_video copying...");
 #ifdef YUV2RGB
@@ -730,6 +791,11 @@ int player_decode_video(struct DecoderData * decoder_data, JNIEnv * env,
 			frame->linesize, 0, ctx->height,
 			rgbFrame->data, rgbFrame->linesize);
 #endif
+#ifdef MEASURE_TIME
+		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &timespec2);
+		diff = timespec_diff(timespec1, timespec2);
+		LOGI(7, "scale image timediff: %d.%9ld",diff.tv_sec, diff.tv_nsec);
+#endif // MEASURE_TIME
 
 #ifdef SUBTITLES
 	if ((player->subtitle_stream_no >= 0)) {
@@ -826,6 +892,10 @@ void * player_decode(void * data) {
 		pthread_mutex_unlock(&player->mutex_queue);
 		LOGI(10, "player_decode decoding frame[%d]", stream_no);
 
+#ifdef MEASURE_TIME
+		struct timespec timespec1, timespec2;
+		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &timespec1);
+#endif // MEASURE_TIME
 		if (codec_type == AVMEDIA_TYPE_AUDIO) {
 			err = player_decode_audio(decoder_data, env, packet);
 		} else if (codec_type == AVMEDIA_TYPE_VIDEO) {
@@ -838,6 +908,19 @@ void * player_decode(void * data) {
 #endif // SUBTITLES
 				assert(FALSE);
 		}
+#ifdef MEASURE_TIME
+		char * type = "unknown";
+		if (codec_type == AVMEDIA_TYPE_AUDIO) {
+			type = "audio";
+		} else if (codec_type == AVMEDIA_TYPE_VIDEO) {
+			type = "video";
+		} else if (codec_type == AVMEDIA_TYPE_SUBTITLE) {
+			type = "subtitle";
+		}
+		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &timespec2);
+		struct timespec diff = timespec_diff(timespec1, timespec2);
+		LOGI(7, "decode timediff (%s): %d.%9ld", type, diff.tv_sec, diff.tv_nsec);
+#endif // MEASURE_TIME
 
 		av_free_packet(packet);
 		queue_pop_finish(queue, &player->mutex_queue, &player->cond_queue);
@@ -2591,15 +2674,31 @@ jobject jni_player_render_frame(JNIEnv *env, jobject thiz) {
 	struct State state = { env: env, player: player, thiz: thiz };
 	int interrupt_ret;
 	struct VideoRGBFrameElem *elem;
+#ifdef MEASURE_TIME
+	struct timespec time_start, time_stop, time_diff, prev_start;
+#endif
 
 	LOGI(7, "jni_player_render_frame render wait...");
 	pthread_mutex_lock(&player->mutex_queue);
+
+#ifdef MEASURE_TIME
+	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time_start);
+#endif // MEASURE_TIME
+
 	pop:
 	LOGI(4, "jni_player_render_frame reading from queue");
 	elem = queue_pop_start_already_locked(&player->rgb_video_frames,
 			&player->mutex_queue, &player->cond_queue,
 			(QueueCheckFunc) player_render_frame_check_func, player,
 			&interrupt_ret);
+#ifdef MEASURE_TIME
+	if (elem != NULL) {
+		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time_stop);
+		time_diff = timespec_diff(time_start, time_stop);
+		LOGI(7, "waiting for element timediff: %d.%9ld",time_diff.tv_sec, time_diff.tv_nsec);
+	}
+#endif // MEASURE_TIME
+
 	for (;;) {
 		int skip = FALSE;
 		if (elem == NULL) {
@@ -2679,11 +2778,38 @@ jobject jni_player_render_frame(JNIEnv *env, jobject thiz) {
 	pthread_mutex_unlock(&player->mutex_queue);
 
 	LOGI(7, "jni_player_render_frame rendering...");
+
+#ifdef MEASURE_TIME
+	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time_stop);
+	time_diff = timespec_diff(time_start, time_stop);
+	LOGI(7, "waiting for write timediff: %d.%9ld",time_diff.tv_sec, time_diff.tv_nsec);
+#endif // MEASURE_TIME
+
+#ifdef MEASURE_TIME
+	prev_start = render_frame_start;
+	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &render_frame_start);
+	time_diff = timespec_diff(render_frame_stop, render_frame_start);
+	// First time will print undefined value
+	LOGI(7, "rendering timediff: %d.%9ld",time_diff.tv_sec, time_diff.tv_nsec);
+	time_diff = timespec_diff(prev_start, render_frame_start);
+	if (time_diff.tv_sec > 0 || time_diff.tv_nsec > 1000 * 1000 * 250) {
+		LOGE(7, "single frame timediff: %d.%9ld",time_diff.tv_sec, time_diff.tv_nsec);
+	} else if (time_diff.tv_nsec > 1000 * 1000 * 40) {
+		LOGW(7, "single frame timediff: %d.%9ld",time_diff.tv_sec, time_diff.tv_nsec);
+	} else {
+		LOGI(7, "single frame timediff: %d.%9ld",time_diff.tv_sec, time_diff.tv_nsec);
+	}
+#endif // MEASURE_TIME
 	return elem->jbitmap;
 }
 
 void jni_player_release_frame(JNIEnv *env, jobject thiz) {
 	struct Player * player = player_get_player_field(env, thiz);
+#ifdef MEASURE_TIME
+	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &render_frame_stop);
+	struct timespec diff = timespec_diff(render_frame_start, render_frame_stop);
+	LOGI(7, "render timediff: %d.%9ld",diff.tv_sec, diff.tv_nsec);
+#endif // MEASURE_TIME
 	queue_pop_finish(player->rgb_video_frames, &player->mutex_queue,
 			&player->cond_queue);
 	LOGI(7, "jni_player_release_frame rendered");
