@@ -56,7 +56,8 @@
 #include "jni-protocol.h"
 #include "aes-protocol.h"
 
-#define LOG_LEVEL 15
+#define FFMPEG_LOG_LEVEL AV_LOG_DEBUG
+#define LOG_LEVEL 10
 #define LOG_TAG "player.c"
 #define LOGI(level, ...) if (level <= LOG_LEVEL) {__android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__);}
 #define LOGE(level, ...) if (level <= LOG_LEVEL) {__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__);}
@@ -326,6 +327,40 @@ enum PlayerErrors {
 	ERROR_COULD_NOT_DESTROY_PTHREAD_ATTR,
 	ERROR_COULD_NOT_ALLOCATE_MEMORY,
 };
+
+
+#define AV_LOG_QUIET    -8
+#define AV_LOG_PANIC     0
+#define AV_LOG_FATAL     8
+#define AV_LOG_ERROR    16
+#define AV_LOG_WARNING  24
+#define AV_LOG_INFO     32
+#define AV_LOG_VERBOSE  40
+#define AV_LOG_DEBUG    48
+
+void ffmpeg_log_callback(void* avcl, int level, const char* fmt, va_list vl) {
+	if (level > av_log_get_level())
+	        return;
+	int andriod_level = ANDROID_LOG_DEFAULT;
+	if (level > AV_LOG_DEBUG) {
+		andriod_level = ANDROID_LOG_DEBUG;
+	} else if (level > AV_LOG_VERBOSE) {
+		andriod_level = ANDROID_LOG_VERBOSE;
+	} else if (level > AV_LOG_INFO) {
+		andriod_level = ANDROID_LOG_INFO;
+	} else if (level > AV_LOG_WARNING) {
+		andriod_level = ANDROID_LOG_WARN;
+	} else if (level > AV_LOG_ERROR) {
+		andriod_level = ANDROID_LOG_ERROR;
+	} else if (level > AV_LOG_FATAL) {
+		andriod_level = ANDROID_LOG_FATAL;
+	} else if (level > AV_LOG_PANIC) {
+		andriod_level = ANDROID_LOG_FATAL;
+	} else if (level > AV_LOG_QUIET) {
+		andriod_level = ANDROID_LOG_SILENT;
+	}
+	__android_log_vprint(andriod_level, "ffmpeg", fmt, vl);
+}
 
 void throw_exception(JNIEnv *env, const char * exception_class_path_name,
 		const char *msg) {
@@ -2600,6 +2635,9 @@ int jni_player_init(JNIEnv *env, jobject thiz) {
 	player->stop = TRUE;
 	player->flush_video_play = FALSE;
 
+	av_log_set_callback(ffmpeg_log_callback);
+	av_log_set_level(FFMPEG_LOG_LEVEL);
+	avformat_network_init();
 	av_register_all();
 	register_jni_protocol(player->get_javavm);
 #ifdef MODULE_ENCRYPT
