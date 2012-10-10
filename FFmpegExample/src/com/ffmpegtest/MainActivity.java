@@ -201,6 +201,7 @@ public class MainActivity extends Activity implements OnClickListener,
 	protected void onDestroy() {
 		super.onDestroy();
 		this.mpegPlayer.setMpegListener(null);
+		this.mpegPlayer.stop();
 		stop();
 	}
 
