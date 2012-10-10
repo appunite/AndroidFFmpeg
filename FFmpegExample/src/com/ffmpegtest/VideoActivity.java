@@ -22,7 +22,6 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Locale;
 
-import android.animation.ObjectAnimator;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -33,7 +32,6 @@ import android.content.pm.ActivityInfo;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.graphics.PixelFormat;
-import android.graphics.RectF;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -44,7 +42,6 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.Window;
 import android.view.WindowManager;
-import android.view.animation.AccelerateDecelerateInterpolator;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.Button;
@@ -58,11 +55,7 @@ import com.appunite.ffmpeg.FFmpegListener;
 import com.appunite.ffmpeg.FFmpegPlayer;
 import com.appunite.ffmpeg.FFmpegStreamInfo;
 import com.appunite.ffmpeg.FFmpegStreamInfo.CodecType;
-import com.appunite.ffmpeg.FFmpegSurfaceView;
-import com.appunite.ffmpeg.FFmpegSurfaceView.ScaleType;
 import com.appunite.ffmpeg.NotPlayingException;
-import com.ffmpegtest.helpers.PropertyDestinationRect;
-import com.ffmpegtest.helpers.RectEvaluator;
 
 public class VideoActivity extends Activity implements OnClickListener,
 		FFmpegListener, OnSeekBarChangeListener, OnItemSelectedListener {
@@ -70,8 +63,6 @@ public class VideoActivity extends Activity implements OnClickListener,
 	private static final String[] PROJECTION = new String[] {"title", BaseColumns._ID};
 	private static final int PROJECTION_ID = 1;
 
-	private static boolean sIsSurfaceView = true;
-	
 	private FFmpegPlayer mMpegPlayer;
 	protected boolean mPlay = false;
 	private View mControlsView;
@@ -91,11 +82,12 @@ public class VideoActivity extends Activity implements OnClickListener,
 	private int mAudioStreamNo = FFmpegPlayer.UNKNOWN_STREAM;
 	private int mSubtitleStreamNo = FFmpegPlayer.NO_STREAM;
 	private View mScaleButton;
-
+	private long mCurrentTimeUs;
+	
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		this.getWindow().requestFeature(Window.FEATURE_NO_TITLE);
-		getWindow().setFormat(PixelFormat.RGB_565);
+		getWindow().setFormat(PixelFormat.RGBA_8888);
 		getWindow().clearFlags(WindowManager.LayoutParams.FLAG_DITHER);
 
 		super.onCreate(savedInstanceState);
@@ -107,10 +99,7 @@ public class VideoActivity extends Activity implements OnClickListener,
 
 		this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 
-		if (sIsSurfaceView)
-			this.setContentView(R.layout.video_surfaceview);
-		else
-			this.setContentView(R.layout.video_view);
+		this.setContentView(R.layout.video_surfaceview);
 
 		mSeekBar = (SeekBar) this.findViewById(R.id.seek_bar);
 		mSeekBar.setOnSeekBarChangeListener(this);
@@ -120,7 +109,7 @@ public class VideoActivity extends Activity implements OnClickListener,
 		
 		mScaleButton = this.findViewById(R.id.scale_type);
 		mScaleButton.setOnClickListener(this);
-
+		
 		mControlsView = this.findViewById(R.id.controls);
 		mStreamsView = this.findViewById(R.id.streams);
 		mLoadingView = this.findViewById(R.id.loading_view);
@@ -146,7 +135,6 @@ public class VideoActivity extends Activity implements OnClickListener,
 		mSubtitleSpinner.setOnItemSelectedListener(this);
 
 		mVideoView = this.findViewById(R.id.video_view);
-		((FFmpegSurfaceView)mVideoView).setScaleType(ScaleType.CENTER_INSIDE, false);
 		mMpegPlayer = new FFmpegPlayer((FFmpegDisplay) mVideoView, this);
 		mMpegPlayer.setMpegListener(this);
 		setDataSource();
@@ -217,47 +205,18 @@ public class VideoActivity extends Activity implements OnClickListener,
 			resumePause();
 			return;
 		case R.id.scale_type:
-			swapScaleType();
 			return;
 		default:
 			throw new RuntimeException();
 		}
 	}
 
-	@TargetApi(Build.VERSION_CODES.ICE_CREAM_SANDWICH)
-	private void swapScaleType() {
-		FFmpegSurfaceView view = (FFmpegSurfaceView)mVideoView;
-		FFmpegSurfaceView.ScaleType scaleType = view.getScaleType();
-		ScaleType newScaleType;
-		if (ScaleType.CENTER_INSIDE.equals(scaleType)) {
-			newScaleType = ScaleType.CENTER_CROP;
-		} else if (ScaleType.CENTER_CROP.equals(scaleType)) {
-			newScaleType = ScaleType.FIT_XY;
-		} else {
-			newScaleType = ScaleType.CENTER_INSIDE;
-		}
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-			view.setScaleType(newScaleType, true);
-			RectF dst = new RectF();
-			view.calculateRect(dst, newScaleType);
-			ObjectAnimator anim = ObjectAnimator.ofObject(view, "destinationRect", new RectEvaluator(), dst);
-			anim.setInterpolator(new AccelerateDecelerateInterpolator());
-			anim.start();
-		} else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-			view.setScaleType(newScaleType, true);
-			RectF dst = new RectF();
-			view.calculateRect(dst, newScaleType);
-			ObjectAnimator anim = ObjectAnimator.ofObject(view, new PropertyDestinationRect(), new RectEvaluator(), dst);
-			anim.setInterpolator(new AccelerateDecelerateInterpolator());
-			anim.start();
-		} else {
-			view.setScaleType(newScaleType, false);
-		}
-	}
-
 	@Override
-	public void onFFUpdateTime(int currentTimeS, int videoDurationS, boolean isFinished) {
+	public void onFFUpdateTime(long currentTimeUs, long videoDurationUs, boolean isFinished) {
+		mCurrentTimeUs = currentTimeUs;
 		if (!mTracking) {
+			int currentTimeS = (int)(currentTimeUs / 1000 / 1000);
+			int videoDurationS = (int)(videoDurationUs / 1000 / 1000);
 			mSeekBar.setMax(videoDurationS);
 			mSeekBar.setProgress(currentTimeS);
 		}
@@ -295,7 +254,6 @@ public class VideoActivity extends Activity implements OnClickListener,
 		this.mControlsView.setVisibility(View.VISIBLE);
 		this.mStreamsView.setVisibility(View.VISIBLE);
 		this.mLoadingView.setVisibility(View.GONE);
-		this.mVideoView.setVisibility(View.VISIBLE);
 		MatrixCursor audio = new MatrixCursor(PROJECTION);
 		MatrixCursor subtitles = new MatrixCursor(PROJECTION);
 		subtitles.addRow(new Object[] {"None", FFmpegPlayer.NO_STREAM});
@@ -375,7 +333,6 @@ public class VideoActivity extends Activity implements OnClickListener,
 		this.mControlsView.setVisibility(View.GONE);
 		this.mStreamsView.setVisibility(View.GONE);
 		this.mLoadingView.setVisibility(View.VISIBLE);
-		this.mVideoView.setVisibility(View.INVISIBLE);
 	}
 
 	@Override
@@ -392,7 +349,8 @@ public class VideoActivity extends Activity implements OnClickListener,
 	public void onProgressChanged(SeekBar seekBar, int progress,
 			boolean fromUser) {
 		if (fromUser) {
-			mMpegPlayer.seek(progress);
+			long timeUs = progress * 1000 * 1000;
+			mMpegPlayer.seek(timeUs);
 		}
 	}
 
@@ -407,9 +365,8 @@ public class VideoActivity extends Activity implements OnClickListener,
 	}
 	
 	private void setDataSourceAndResumeState() {
-		int progress = mSeekBar.getProgress();
 		setDataSource();
-		mMpegPlayer.seek(progress);
+		mMpegPlayer.seek(mCurrentTimeUs);
 		mMpegPlayer.resume();
 	}
 

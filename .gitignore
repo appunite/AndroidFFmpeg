@@ -9,6 +9,7 @@ FFmpegLibrary/proguard/**
 FFmpegLibrary/.settings/**
 FFmpegLibrary/jni/.settings/**
 FFmpegLibrary/lint.xml
+FFmpegLibrary/jni/libyuv/**
 
 FFmpegExample/bin/**
 FFmpegExample/gen/**

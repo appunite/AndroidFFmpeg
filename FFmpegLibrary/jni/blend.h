@@ -24,7 +24,7 @@
 
 void blend_ass_image(AVPicture *dest, const ASS_Image *image, int imgw,
 		int imgh, enum PixelFormat pixel_format);
-void blend_subrect_rgb(AVPicture *dest, const AVSubtitleRect *rect, int imgw,
+void blend_subrect_rgba(AVPicture *dest, const AVSubtitleRect *rect, int imgw,
 		int imgh, enum PixelFormat pixel_format);
 
 #endif /* BLEND_H_ */

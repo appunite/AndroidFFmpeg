@@ -26,6 +26,7 @@ import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.os.AsyncTask;
+import android.view.Surface;
 
 public class FFmpegPlayer {
 	private static class StopTask extends AsyncTask<Void, Void, Void> {
@@ -99,7 +100,7 @@ public class FFmpegPlayer {
 	}
 
 	private static class SeekTask extends
-			AsyncTask<Integer, Void, NotPlayingException> {
+			AsyncTask<Long, Void, NotPlayingException> {
 
 		private final FFmpegPlayer player;
 
@@ -108,9 +109,9 @@ public class FFmpegPlayer {
 		}
 
 		@Override
-		protected NotPlayingException doInBackground(Integer... params) {
+		protected NotPlayingException doInBackground(Long... params) {
 			try {
-				player.seekNative(params[0].intValue());
+				player.seekNative(params[0].longValue());
 			} catch (NotPlayingException e) {
 				return e;
 			}
@@ -203,15 +204,15 @@ public class FFmpegPlayer {
 		@Override
 		public void run() {
 			if (mpegListener != null) {
-				mpegListener.onFFUpdateTime(mCurrentTimeS,
-					mVideoDurationS, mIsFinished);
+				mpegListener.onFFUpdateTime(mCurrentTimeUs,
+					mVideoDurationUs, mIsFinished);
 			}
 		}
 
 	};
 
-	private int mCurrentTimeS;
-	private int mVideoDurationS;
+	private long mCurrentTimeUs;
+	private long mVideoDurationUs;
 	private FFmpegStreamInfo[] mStreamsInfos = null;
 	private boolean mIsFinished = false;
 
@@ -250,13 +251,11 @@ public class FFmpegPlayer {
 
 	native void renderFrameStop();
 
-	native Bitmap renderFrameNative() throws InterruptedException;
+	private native void seekNative(long positionUs) throws NotPlayingException;
 
-	native void releaseFrame();
-
-	private native void seekNative(int position) throws NotPlayingException;
-
-	private native int getVideoDurationNative();
+	private native long getVideoDurationNative();
+	
+	public native void render(Surface surface);
 
 	/**
 	 * 
@@ -288,8 +287,8 @@ public class FFmpegPlayer {
 		new PauseTask(this).execute();
 	}
 
-	public void seek(int position) {
-		new SeekTask(this).execute(Integer.valueOf(position));
+	public void seek(long positionUs) {
+		new SeekTask(this).execute(Long.valueOf(positionUs));
 	}
 
 	public void resume() {
@@ -300,16 +299,16 @@ public class FFmpegPlayer {
 		// Bitmap bitmap =
 		// Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
 		Bitmap bitmap = Bitmap.createBitmap(width, height,
-				Bitmap.Config.RGB_565);
+				Bitmap.Config.ARGB_8888);
 		this.mRenderedFrame.height = height;
 		this.mRenderedFrame.width = width;
 		return bitmap;
 	}
 
-	private void onUpdateTime(int currentSec, int maxSec, boolean isFinished) {
+	private void onUpdateTime(long currentUs, long maxUs, boolean isFinished) {
 
-		this.mCurrentTimeS = currentSec;
-		this.mVideoDurationS = maxSec;
+		this.mCurrentTimeUs = currentUs;
+		this.mVideoDurationUs = maxUs;
 		this.mIsFinished  = isFinished;
 		activity.runOnUiThread(updateTimeRunnable);
 	}
@@ -374,11 +373,6 @@ public class FFmpegPlayer {
 				Integer.valueOf(subtitlesStream));
 	}
 
-	RenderedFrame renderFrame() throws InterruptedException {
-		this.mRenderedFrame.bitmap = this.renderFrameNative();
-		return this.mRenderedFrame;
-	}
-
 	public FFmpegListener getMpegListener() {
 		return mpegListener;
 	}
@@ -386,4 +380,5 @@ public class FFmpegPlayer {
 	public void setMpegListener(FFmpegListener mpegListener) {
 		this.mpegListener = mpegListener;
 	}
+	
 }

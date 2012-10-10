@@ -1,6 +1,6 @@
 /*
- * FFmpegListener.java
- * Copyright (c) 2012 Jacek Marchwicki
+ * sync.h
+ * Copyright (c) 2013 Jacek Marchwicki
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,15 @@
  *
  */
 
-package com.appunite.ffmpeg;
+#ifndef SYNC_H_
+#define SYNC_H_
 
-public interface FFmpegListener {
-	void onFFDataSourceLoaded(FFmpegError err, FFmpegStreamInfo[] streams);
+enum WaitFuncRet {
+	WAIT_FUNC_RET_OK = 0,
+	WAIT_FUNC_RET_SKIP = 1,
+};
 
-	void onFFResume(NotPlayingException result);
+typedef enum WaitFuncRet (WaitFunc) (void *data , int64_t time, int stream_no);
 
-	void onFFPause(NotPlayingException err);
 
-	void onFFStop();
-
-	void onFFUpdateTime(long mCurrentTimeUs, long mVideoDurationUs, boolean isFinished);
-
-	void onFFSeeked(NotPlayingException result);
-
-}
+#endif /* SYNC_H_ */

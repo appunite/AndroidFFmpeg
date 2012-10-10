@@ -1,10 +1,12 @@
 # AndroidFFmpegLibrary
-This project aims to create **working** library providing playing and converting video files in android via ffmpeg libraries.
+This project aims to create **working** library providing playing video files in android via ffmpeg libraries. With some effort and NDK knowledge you can use this ffmpeg libraries build to convert video files.
 We rather want to use ffmpeg library without modifications to facilitate updating of ffmpeg core.
 
 ![Application screenshot](http://s12.postimage.org/o528w8jst/Screenshot1.png)
 
 This project aim to simplify compilation of FFmpeg for android different architectures to one big apk file.
+
+I'm afraid this project is not prepared for android beginners - build it and using it requires some NDK skills. 
 
 ## Moved source code
 I moved project source code to our company review system https://review.appunite.com
@@ -20,7 +22,7 @@ or
 Copyright (C) 2012 Appunite.com
 Licensed under the Apache License, Verision 2.0
 
-FFmpeg, libvo-aacenc, vo-amrwbenc, yuv2rgb and others libraries projects are distributed on theirs own license.
+FFmpeg, libvo-aacenc, vo-amrwbenc, libyuv and others libraries projects are distributed on theirs own license.
 
 ## Patent disclaimer
 We do not grant of patent rights.
@@ -34,14 +36,16 @@ you have to install:
 - autoconf-archive
 - automake
 - pkg-config
+- git
+- svn
 
 on Debian/Ubuntu - you can use apt-get
 
 on Mac - you can use tool brew from homebrew project. You have additionally install xcode. 
 
-## Bug reporting
+## Bug reporting and questions
 
-**Please read instruciton very carefully**. A lot of people had trouble because they did not read this with attention. **If you have some problem do not send me emails**. First: look on past issues on github. Than: try figure out problem with google. If you did not find solution then you can ask on github issue tracker.
+**Please read instruciton very carefully**. A lot of people had trouble because they did not read this manual with attention. **If you have some problems or questions do not send me emails**. First: look on past issues on github. Than: try figure out problem with google. If you did not find solution then you can ask on github issue tracker.
 
 ## Installation
 
@@ -66,6 +70,11 @@ downloading source code
 	git submodule update
 	cd FFmpegLibrary
 	cd jni
+
+download libyuv
+
+	# I hate svn too :)
+	svn checkout http://libyuv.googlecode.com/svn/trunk/ libyuv
 
 setup freetype environemtn
 
@@ -104,6 +113,7 @@ build external libraries
 	
 make sure that files FFmpegLibrary/jni/ffmpeg-build/{armeabi,armeabi-v7a,x86}/libffmpeg.so was created, otherwise you are in truble
 
+
 build ndk jni library
 
 	ndk-build
@@ -123,7 +133,7 @@ Run FFmpegExample as your android project.
 If you have adt >= 20.0 you can click right mouse button on project and FFmpegLibrary project and "Android->Add native support".
 
 ## More codecs
-If you nead more codecs:
+If you need more codecs:
 - edit build_android.sh
 - add more codecs in ffmpeg configuration section
 - remove old ffmpeg-build directory by
@@ -158,3 +168,7 @@ Library made by Jacek Marchwicki from Appunite.com
 - Thanks to best-video-player for sample code: http://code.google.com/p/best-video-player/
 - Thanks to Robin Watts for his work in yuv2rgb converter http://wss.co.uk/pinknoise/yuv2rgb/
 - Thanks to Mohamed Naufal (https://github.com/hexene) and Martin Storsjö (https://github.com/mstorsjo) for theirs work on sample code for stagefright/openmax integration layer.
+- Thanks www.fourcc.org for theirs http://www.fourcc.org/yuv.php page
+- Thanks to Cedric Fungfor his blog bost: http://vec.io/posts/use-android-hardware-decoder-with-omxcodec-in-ndk
+- Thanks Google/Google chrome/Chromium teams for libyuv library https://code.google.com/p/libyuv/
+- Thanks to Picker Wengs for this slides about android multimedia stack http://www.slideshare.net/pickerweng/android-multimedia-framework

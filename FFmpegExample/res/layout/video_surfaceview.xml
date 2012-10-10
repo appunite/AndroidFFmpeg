@@ -69,7 +69,7 @@
         android:layout_height="fill_parent"
         android:layout_above="@+id/controls"
         android:layout_below="@+id/streams"
-        android:visibility="invisible" />
+        android:visibility="visible" />
 
     <ProgressBar
         android:id="@+id/loading_view"

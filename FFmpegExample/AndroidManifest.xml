@@ -58,6 +58,7 @@
                 <data android:mimeType="*/mkv" />
                 <data android:mimeType="applicatin/mpeg*" />
                 <data android:mimeType="applicatin/mp4*" />
+                <data android:mimeType="audio/ogg" />
                 <data android:mimeType="applicatin/ogg" />
                 <data android:mimeType="applicatin/3gpp" />
                 <data android:mimeType="applicatin/vnd.3gp*" />

@@ -310,6 +310,7 @@ EOF
 	    --enable-encoder=libvo_amrwbenc \
 	    --enable-decoder=amrwb \
 	    --enable-muxer=mp2 \
+	    --enable-bsfs \
 	    --enable-decoders \
 	    --enable-encoders \
 	    --enable-parsers \
