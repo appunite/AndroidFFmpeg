@@ -1,19 +1,31 @@
 # AndroidFFmpegLibrary
 This project aims to create **working** library providing playing and converting video files in android via ffmpeg libraries.
+We rather want to use ffmpeg library without modifications to facilitate updating of ffmpeg core.
 
 ![Application screenshot](http://s12.postimage.org/o528w8jst/Screenshot1.png)
  
 ## Info
-This project aim to simplify compilation of FFmpeg for android diffrent architecutres to one big apk file.
+This project aim to simplify compilation of FFmpeg for android different architectures to one big apk file.
+
+## Moved source code
+I moved project source code to our company review system https://review.appunite.com
+because I am used to benefit from review systems like Gerrit. There you can find newest not yet accepted source code. If you do not care of newest source code or contributing software you can just use github where you can reaches accepted
+commits.
+
+	git clone https://review.appunite.com/androidffmpeg
+	
+or
+
+	git clone https://github.com/appunite/AndroidFFmpeg.git
 
 ## License
-Coypyright (C) 2012 Appunite.com
+Copyright (C) 2012 Appunite.com
 Licensed under the Apache License, Verision 2.0
 
 FFmpeg, libvo-aacenc, vo-amrwbenc, yuv2rgb and others libraries projects are distributed on theirs own license.
 
-## Patent desclimer
-We do not grant of patent rigts.
+## Patent disclaimer
+We do not grant of patent rights.
 Some codecs use patented techniques and before use those parts of library you have to buy thrid-party patents.
 
 ## Pre-requirments
@@ -29,14 +41,14 @@ on Debian/Ubuntu - you can use apt-get
 on Mac - you can use tool brew from homebrew project. You have additionally install xcode. 
 
 
-## Instalation
+## Installation
 
 ### Before start
 if you have a problem with certificate add *GIT\_SSL\_NO\_VERIFY=true* before git submodule update line
 
 	GIT_SSL_NO_VERIFY=true  git submodule update
 
-Im sorry about this certifficate issue, but never is enough time to fix problems like those
+Im sorry about this certificate issue, but never is enough time to fix problems like those
 
 **If you have ssh key in our review system** you should setup global alias in *~/.gitconfig* file.
 
@@ -45,7 +57,7 @@ Im sorry about this certifficate issue, but never is enough time to fix problems
 ### Go to the work
 downloading source code 
 
-	git clone git://github.com/appunite/AndroidFFmpeg.git AndroidFFmpeg
+	git clone https://review.appunite.com/androidffmpeg AndroidFFmpeg
 	cd AndroidFFmpeg
 	git submodule init
 	git submodule sync #if you are updating source code
@@ -118,7 +130,7 @@ If you nead more codecs:
 
 		./build_android.sh
 		
-	During this process make sure that ffmpeg configuation goes without error.
+	During this process make sure that ffmpeg configuration goes without error.
 	
 	After build make sure that files FFmpegLibrary/libs/{armeabi,armeabi-v7a,x86}/libffmpeg.so was created, otherwise you are in truble
 
@@ -141,3 +153,4 @@ Library made by Jacek Marchwicki from Appunite.com
 - Thanks to android-fplayer for sample code: http://code.google.com/p/android-fplayer/
 - Thanks to best-video-player for sample code: http://code.google.com/p/best-video-player/
 - Thanks to Robin Watts for his work in yuv2rgb converter http://wss.co.uk/pinknoise/yuv2rgb/
+- Thanks to Mohamed Naufal (https://github.com/hexene) and Martin Storsjö (https://github.com/mstorsjo) for theirs work on sample code for stagefright/openmax integration layer.
