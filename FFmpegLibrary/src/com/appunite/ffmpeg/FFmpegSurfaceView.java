@@ -35,7 +35,9 @@ public class FFmpegSurfaceView extends SurfaceView implements FFmpegDisplay,
 	private Object mMpegPlayerLock = new Object();
 	private TutorialThread mThread = null;
 	private Paint mPaint;
-	private FpsCounter fpsCounter;
+	
+	private Object mFpsCounterLock = new Object();
+	private FpsCounter mFpsCounter = null;
 
 	public FFmpegSurfaceView(Context context) {
 		this(context, null, 0);
@@ -50,10 +52,10 @@ public class FFmpegSurfaceView extends SurfaceView implements FFmpegDisplay,
 
 		getHolder().addCallback(this);
 
-		this.mPaint = new Paint();
-		this.mPaint.setTextSize(32);
-		this.mPaint.setColor(Color.RED);
-		this.fpsCounter = new FpsCounter(10);
+		mPaint = new Paint();
+		mPaint.setTextSize(32);
+		mPaint.setColor(Color.RED);
+		mFpsCounter = new FpsCounter(10);
 	}
 
 	@Override
@@ -64,6 +66,18 @@ public class FFmpegSurfaceView extends SurfaceView implements FFmpegDisplay,
 		synchronized (mMpegPlayerLock) {
 			this.mMpegPlayer = fFmpegPlayer;
 			mMpegPlayerLock.notifyAll();
+		}
+	}
+	
+	public void showFpsCounter(boolean showFpsCounter) {
+		synchronized (mFpsCounterLock) {
+			if (showFpsCounter) {
+				if (mFpsCounter == null) {
+					mFpsCounter = new FpsCounter(10);
+				}
+			} else {
+				mFpsCounter = null;
+			}
 		}
 	}
 
@@ -93,48 +107,61 @@ public class FFmpegSurfaceView extends SurfaceView implements FFmpegDisplay,
 		@Override
 		public void run() {
 			while (isRunning()) {
-
 				try {
 					synchronized (mMpegPlayerLock) {
 						while (mMpegPlayerLock == null)
 							mMpegPlayerLock.wait();
-						RenderedFrame renderFrame = mMpegPlayer.renderFrame();
-						if (renderFrame == null)
-							throw new RuntimeException();
-						if (renderFrame.bitmap == null)
-							throw new RuntimeException();
-						try {
-							Canvas canvas = mSurfaceHolder.lockCanvas();
-							if (canvas == null)
-								return;
-							try {
-								canvas.drawColor(Color.BLACK);
-								canvas.save();
-								float ratiow = mSurfaceWidth
-										/ (float) renderFrame.width;
-								float ratioh = mSurfaceHeight
-										/ (float) renderFrame.height;
-								float ratio = ratiow > ratioh ? ratioh : ratiow;
-								float moveX = ((renderFrame.width * ratio - mSurfaceWidth) / 2.0f);
-								float moveY = ((renderFrame.height * ratio - mSurfaceHeight) / 2.0f);
-								canvas.translate(-moveX, -moveY);
-								canvas.scale(ratio, ratio);
-		
-								canvas.drawBitmap(renderFrame.bitmap, 0, 0, null);
-								canvas.restore();
-		
-								String fps = fpsCounter.tick();
-							//	canvas.drawText(fps, 40 - moveX, 40 - moveY, mPaint);
-							} finally {
-								mSurfaceHolder.unlockCanvasAndPost(canvas);
-							}
-						} finally {
-							mMpegPlayer.releaseFrame();							
-						}
+						renderFrame(mMpegPlayer);
 					}
 				} catch (InterruptedException e) {
 				}
+			}
+		}
 
+		private void renderFrame(FFmpegPlayer mpegPlayer) throws InterruptedException {
+			RenderedFrame renderFrame = mpegPlayer.renderFrame();
+			if (renderFrame == null)
+				throw new RuntimeException();
+			if (renderFrame.bitmap == null)
+				throw new RuntimeException();
+			try {
+				drawFrame(renderFrame);
+			} finally {
+				mMpegPlayer.releaseFrame();							
+			}
+		}
+
+		private void drawFrame(RenderedFrame renderFrame) {
+			Canvas canvas = mSurfaceHolder.lockCanvas();
+			if (canvas == null)
+				return;
+			try {
+				canvas.drawColor(Color.BLACK);
+				canvas.save();
+				float ratiow = mSurfaceWidth
+						/ (float) renderFrame.width;
+				float ratioh = mSurfaceHeight
+						/ (float) renderFrame.height;
+				float ratio = ratiow > ratioh ? ratioh : ratiow;
+				float moveX = ((renderFrame.width * ratio - mSurfaceWidth) / 2.0f);
+				float moveY = ((renderFrame.height * ratio - mSurfaceHeight) / 2.0f);
+				canvas.translate(-moveX, -moveY);
+				canvas.scale(ratio, ratio);
+
+				canvas.drawBitmap(renderFrame.bitmap, 0, 0, null);
+				canvas.restore();
+				drawFpsCounter(canvas, moveX, moveY);
+			} finally {
+				mSurfaceHolder.unlockCanvasAndPost(canvas);
+			}
+		}
+
+		private void drawFpsCounter(Canvas canvas, float moveX, float moveY) {
+			synchronized (mFpsCounterLock) {
+				if (mFpsCounter != null) {
+					String fps = mFpsCounter.tick();
+					canvas.drawText(fps, 40 - moveX, 40 - moveY, mPaint);
+				}
 			}
 		}
 	}
