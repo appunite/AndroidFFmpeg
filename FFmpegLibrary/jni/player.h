@@ -89,7 +89,7 @@ static const struct {
 // FFmpegPlayer
 static char *player_class_path_name = "com/appunite/ffmpeg/FFmpegPlayer";
 static JavaField player_m_native_player = {"mNativePlayer", "I"};
-static JavaMethod player_on_update_time = {"onUpdateTime","(II)V"};
+static JavaMethod player_on_update_time = {"onUpdateTime","(IIZ)V"};
 static JavaMethod player_prepare_audio_track = {"prepareAudioTrack", "(II)Landroid/media/AudioTrack;"};
 static JavaMethod player_prepare_frame = {"prepareFrame", "(II)Landroid/graphics/Bitmap;"};
 static JavaMethod player_set_stream_info = {"setStreamsInfo", "([Lcom/appunite/ffmpeg/FFmpegStreamInfo;)V"};

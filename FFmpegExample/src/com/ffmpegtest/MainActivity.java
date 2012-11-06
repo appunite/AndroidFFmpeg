@@ -246,7 +246,7 @@ public class MainActivity extends Activity implements OnClickListener,
 		// url = "file://" + videoFile.getAbsolutePath();
 
 		File videoFile = new File(Environment.getExternalStorageDirectory(),
-				"videos/ThreeMenInABoatToSayNothingOfTheDog_RUS_eng_1500.mp4");
+				"airbender/videos/Videoguides-Riga_SIL_engrus_1500.mp4");
 //		File videoFile = new File(Environment.getExternalStorageDirectory(),
 //				"videos/no.mkv");
 		url = "file://" + videoFile.getAbsolutePath();
@@ -280,10 +280,17 @@ public class MainActivity extends Activity implements OnClickListener,
 	}
 
 	@Override
-	public void onFFUpdateTime(int currentTimeS, int videoDurationS) {
+	public void onFFUpdateTime(int currentTimeS, int videoDurationS, boolean isFinished) {
 		if (!mTracking) {
 			seekBar.setMax(videoDurationS);
 			seekBar.setProgress(currentTimeS);
+		}
+		
+		if (isFinished) {
+			new AlertDialog.Builder(this)
+					.setTitle(R.string.dialog_end_of_video_title)
+					.setMessage(R.string.dialog_end_of_video_message)
+					.setCancelable(true).show();
 		}
 	}
 

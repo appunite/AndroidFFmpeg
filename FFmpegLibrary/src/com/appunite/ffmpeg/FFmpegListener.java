@@ -20,10 +20,15 @@ package com.appunite.ffmpeg;
 
 public interface FFmpegListener {
 	void onFFDataSourceLoaded(FFmpegError err, FFmpegStreamInfo[] streams);
+
 	void onFFResume(NotPlayingException result);
+
 	void onFFPause(NotPlayingException err);
+
 	void onFFStop();
-	void onFFUpdateTime(int currentTimeS, int videoDurationS);
+
+	void onFFUpdateTime(int currentTimeS, int videoDurationS, boolean isFinished);
+
 	void onFFSeeked(NotPlayingException result);
 
 }

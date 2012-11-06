@@ -200,7 +200,7 @@ public class FFmpegPlayer {
 
 		@Override
 		public void run() {
-			getMpegListener().onFFUpdateTime(mCurrentTimeS, mVideoDurationS);
+			getMpegListener().onFFUpdateTime(mCurrentTimeS, mVideoDurationS, mIsFinished);
 		}
 
 	};
@@ -208,6 +208,7 @@ public class FFmpegPlayer {
 	private int mCurrentTimeS;
 	private int mVideoDurationS;
 	private FFmpegStreamInfo[] mStreamsInfos = null;
+	private boolean mIsFinished = false;
 
 	public static class RenderedFrame {
 		public Bitmap bitmap;
@@ -300,10 +301,11 @@ public class FFmpegPlayer {
 		return bitmap;
 	}
 
-	private void onUpdateTime(int currentSec, int maxSec) {
+	private void onUpdateTime(int currentSec, int maxSec, boolean isFinished) {
 
 		this.mCurrentTimeS = currentSec;
 		this.mVideoDurationS = maxSec;
+		this.mIsFinished  = isFinished;
 		activity.runOnUiThread(updateTimeRunnable);
 	}
 

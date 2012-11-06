@@ -3,13 +3,16 @@
 
     <string name="hello">Hello World, FFmpegExampleActivity!</string>
     <string name="app_name">FFmpegExample</string>
-	<string name="no_videos">No videos</string>
-	<string name="could_not_read_videos_directory">Could not read videos directory</string>
-	<string name="error">Error!</string>
-	<string name="select_item">Select video file</string>
-	<string name="convert">Convert Video</string>
-	<string name="could_convert_video">Could not convert video</string>
-	<string name="language_spinner_drop_down">Language: %s</string>
-	<string name="subtitle_spinner_drop_down">Subtitle: %s</string>
-	<string name="unknown">Unknown</string>
+    <string name="no_videos">No videos</string>
+    <string name="could_not_read_videos_directory">Could not read videos directory</string>
+    <string name="error">Error!</string>
+    <string name="select_item">Select video file</string>
+    <string name="convert">Convert Video</string>
+    <string name="could_convert_video">Could not convert video</string>
+    <string name="language_spinner_drop_down">Language: %s</string>
+    <string name="subtitle_spinner_drop_down">Subtitle: %s</string>
+    <string name="unknown">Unknown</string>
+    <string name="dialog_end_of_video_title">End of video</string>
+    <string name="dialog_end_of_video_message">End of video occure</string>
+
 </resources>

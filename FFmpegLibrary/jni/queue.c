@@ -161,12 +161,16 @@ void *queue_push_start(Queue *queue, pthread_mutex_t * mutex,
 	return ret;
 }
 
+void queue_push_finish_already_locked(Queue *queue, pthread_mutex_t * mutex,
+		pthread_cond_t *cond, int to_write) {
+	queue->ready[to_write] = TRUE;
+	pthread_cond_broadcast(cond);
+}
+
 void queue_push_finish(Queue *queue, pthread_mutex_t * mutex,
 		pthread_cond_t *cond, int to_write) {
 	pthread_mutex_lock(mutex);
-	queue->ready[to_write] = TRUE;
-
-	pthread_cond_broadcast(cond);
+	queue_push_finish_already_locked(queue, mutex, cond, to_write);
 	pthread_mutex_unlock(mutex);
 }
 

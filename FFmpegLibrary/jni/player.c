@@ -136,12 +136,30 @@ struct VideoRGBFrameElem {
 	AVFrame *frame;
 	jobject jbitmap;
 	double time;
+	int end_of_stream;
 };
 
 struct SubtitleElem {
 	AVSubtitle subtitle;
 	double start_time;
 	double stop_time;
+};
+
+struct PacketData {
+	int end_of_stream;
+	AVPacket *packet;
+};
+
+struct DecoderState {
+	int stream_no;
+	struct Player *player;
+	JNIEnv* env;
+	jobject thiz;
+};
+
+struct DecoderData {
+	struct Player *player;
+	int stream_no;
 };
 
 #define MAX_STREAMS 3
@@ -241,18 +259,6 @@ struct State {
 	struct Player *player;
 	JNIEnv* env;
 	jobject thiz;
-};
-
-struct DecoderState {
-	int stream_no;
-	struct Player *player;
-	JNIEnv* env;
-	jobject thiz;
-};
-
-struct DecoderData {
-	struct Player *player;
-	int stream_no;
 };
 
 enum Msgs {
@@ -413,7 +419,7 @@ void player_decode_audio_flush(struct DecoderData * decoder_data, JNIEnv * env) 
 			player->audio_track_flush_method);
 }
 int player_decode_audio(struct DecoderData * decoder_data, JNIEnv * env,
-		AVPacket *packet) {
+		struct PacketData *packet_data) {
 	int got_frame_ptr;
 	struct Player *player = decoder_data->player;
 	int stream_no = decoder_data->stream_no;
@@ -421,6 +427,7 @@ int player_decode_audio(struct DecoderData * decoder_data, JNIEnv * env,
 	AVFrame * frame = player->input_frames[stream_no];
 
 	LOGI(3, "player_decode_audio decoding");
+	AVPacket *packet = packet_data->packet;
 	int len = avcodec_decode_audio4(ctx, frame, &got_frame_ptr, packet);
 
 	int64_t pts = packet->pts;
@@ -579,12 +586,12 @@ static void ass_msg_callback(int level, const char *fmt, va_list va, void *data)
 //}
 
 int player_decode_subtitles(struct DecoderData * decoder_data, JNIEnv * env,
-		AVPacket *packet) {
+		struct PacketData *packet_data) {
 	struct Player *player = decoder_data->player;
 	int stream_no = decoder_data->stream_no;
 	AVCodecContext * ctx = player->input_codec_ctxs[stream_no];
 	AVStream * stream = player->input_streams[stream_no];
-
+	AVPacket *packet = packet_data->packet;
 	int to_write;
 	int interrupt_ret;
 
@@ -664,8 +671,9 @@ int player_decode_subtitles(struct DecoderData * decoder_data, JNIEnv * env,
 	return ERROR_NO_ERROR;
 }
 #endif // SUBTITLES
+
 int player_decode_video(struct DecoderData * decoder_data, JNIEnv * env,
-		AVPacket *packet) {
+		struct PacketData *packet_data) {
 	int got_frame_ptr;
 	struct Player *player = decoder_data->player;
 	int stream_no = decoder_data->stream_no;
@@ -673,10 +681,39 @@ int player_decode_video(struct DecoderData * decoder_data, JNIEnv * env,
 	AVFrame * frame = player->input_frames[stream_no];
 	AVStream * stream = player->input_streams[stream_no];
 	int interrupt_ret;
+	int to_write;
+	struct VideoRGBFrameElem * elem;
 
 #ifdef MEASURE_TIME
 	struct timespec timespec1, timespec2, diff;
 #endif // MEASURE_TIME
+
+	if (packet_data->end_of_stream) {
+		LOGI(2, "player_decode_video waiting for queue to end of stream");
+		pthread_mutex_lock(&player->mutex_queue);
+		elem = queue_push_start_already_locked(player->rgb_video_frames,
+				&player->mutex_queue, &player->cond_queue, &to_write,
+				(QueueCheckFunc) player_decode_queue_check_func, decoder_data,
+				(void **) &interrupt_ret);
+		if (elem == NULL) {
+			if (interrupt_ret == DECODE_CHECK_MSG_STOP) {
+				LOGI(2, "player_decode_video push stop");
+			} else if (interrupt_ret == DECODE_CHECK_MSG_FLUSH) {
+				LOGI(2, "player_decode_video push flush");
+			} else {
+				assert(FALSE);
+			}
+			pthread_mutex_unlock(&player->mutex_queue);
+			return 0;
+		}
+		elem->end_of_stream = TRUE;
+		LOGI(2, "player_decode_video sending end of stream");
+		queue_push_finish_already_locked(player->rgb_video_frames,
+				&player->mutex_queue, &player->cond_queue, to_write);
+		pthread_mutex_unlock(&player->mutex_queue);
+		return 0;
+	}
+
 
 	LOGI(10, "player_decode_video decoding");
 	int frameFinished;
@@ -685,7 +722,7 @@ int player_decode_video(struct DecoderData * decoder_data, JNIEnv * env,
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &timespec1);
 #endif // MEASURE_TIME
 
-	int ret = avcodec_decode_video2(ctx, frame, &frameFinished, packet);
+	int ret = avcodec_decode_video2(ctx, frame, &frameFinished, packet_data->packet);
 
 #ifdef MEASURE_TIME
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &timespec2);
@@ -714,30 +751,26 @@ int player_decode_video(struct DecoderData * decoder_data, JNIEnv * env,
 
 	// saving in buffer converted video frame
 	LOGI(7, "player_decode_video copy wait");
-	int to_write;
-	struct VideoRGBFrameElem * elem;
 
 #ifdef MEASURE_TIME
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &timespec1);
 #endif // MEASURE_TIME
 
 	pthread_mutex_lock(&player->mutex_queue);
-	push: elem = queue_push_start_already_locked(player->rgb_video_frames,
+	elem = queue_push_start_already_locked(player->rgb_video_frames,
 			&player->mutex_queue, &player->cond_queue, &to_write,
 			(QueueCheckFunc) player_decode_queue_check_func, decoder_data,
 			(void **) &interrupt_ret);
 	if (elem == NULL) {
 		if (interrupt_ret == DECODE_CHECK_MSG_STOP) {
 			LOGI(2, "player_decode_video push stop");
-			pthread_mutex_unlock(&player->mutex_queue);
-			return 0;
 		} else if (interrupt_ret == DECODE_CHECK_MSG_FLUSH) {
 			LOGI(2, "player_decode_video push flush");
-			pthread_mutex_unlock(&player->mutex_queue);
-			return 0;
 		} else {
 			assert(FALSE);
 		}
+		pthread_mutex_unlock(&player->mutex_queue);
+		return 0;
 	}
 
 #ifdef MEASURE_TIME
@@ -786,6 +819,7 @@ int player_decode_video(struct DecoderData * decoder_data, JNIEnv * env,
 #endif // SUBTITLES
 	pthread_mutex_unlock(&player->mutex_queue);
 	elem->time = time;
+	elem->end_of_stream = FALSE;
 	AVFrame * rgbFrame = elem->frame;
 	void *buffer;
 	int destWidth = ctx->width;
@@ -919,14 +953,14 @@ void * player_decode(void * data) {
 	for (;;) {
 		LOGI(10, "player_decode waiting for frame[%d]", stream_no);
 		int interrupt_ret;
-		AVPacket *packet;
+		struct PacketData *packet_data;
 		pthread_mutex_lock(&player->mutex_queue);
-		pop: packet = queue_pop_start_already_locked(&queue,
+		pop: packet_data = queue_pop_start_already_locked(&queue,
 				&player->mutex_queue, &player->cond_queue,
 				(QueueCheckFunc) player_decode_queue_check_func, decoder_data,
 				(void **) &interrupt_ret);
 
-		if (packet == NULL) {
+		if (packet_data == NULL) {
 			if (interrupt_ret == DECODE_CHECK_MSG_FLUSH) {
 				goto flush;
 			} else if (interrupt_ret == DECODE_CHECK_MSG_STOP) {
@@ -937,19 +971,22 @@ void * player_decode(void * data) {
 		}
 		pthread_mutex_unlock(&player->mutex_queue);
 		LOGI(10, "player_decode decoding frame[%d]", stream_no);
+		if (packet_data->end_of_stream) {
+			LOGI(10, "player_decode read end of stream");
+		}
 
 #ifdef MEASURE_TIME
 		struct timespec timespec1, timespec2;
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &timespec1);
 #endif // MEASURE_TIME
 		if (codec_type == AVMEDIA_TYPE_AUDIO) {
-			err = player_decode_audio(decoder_data, env, packet);
+			err = player_decode_audio(decoder_data, env, packet_data);
 		} else if (codec_type == AVMEDIA_TYPE_VIDEO) {
-			err = player_decode_video(decoder_data, env, packet);
+			err = player_decode_video(decoder_data, env, packet_data);
 		} else {
 #ifdef SUBTITLES
 			if (codec_type == AVMEDIA_TYPE_SUBTITLE) {
-				err = player_decode_subtitles(decoder_data, env, packet);
+				err = player_decode_subtitles(decoder_data, env, packet_data);
 			} else
 #endif // SUBTITLES
 				assert(FALSE);
@@ -968,7 +1005,9 @@ void * player_decode(void * data) {
 		LOGI(7, "decode timediff (%s): %d.%9ld", type, diff.tv_sec, diff.tv_nsec);
 #endif // MEASURE_TIME
 
-		av_free_packet(packet);
+		if (!packet_data->end_of_stream) {
+			av_free_packet(packet_data->packet);
+		}
 		queue_pop_finish(queue, &player->mutex_queue, &player->cond_queue);
 		if (err < 0) {
 			pthread_mutex_lock(&player->mutex_queue);
@@ -983,10 +1022,12 @@ void * player_decode(void * data) {
 
 		flush:
 		LOGI(2, "player_decode flush[%d]", stream_no);
-		AVPacket *to_free;
+		struct PacketData *to_free; // FIXME move to struct PacketData
 		while ((to_free = queue_pop_start_already_locked_non_block(queue))
 				!= NULL) {
-			av_free_packet(to_free);
+			if (!to_free->end_of_stream) {
+				av_free_packet(to_free->packet);
+			}
 			queue_pop_finish_already_locked(queue, &player->mutex_queue,
 					&player->cond_queue);
 		}
@@ -1080,6 +1121,9 @@ void * player_read_from_stream(void *data) {
 	Queue *queue;
 	int seek_input_stream_number;
 	AVStream * seek_input_stream;
+	struct PacketData *packet_data;
+	int to_write;
+	int interrupt_ret;
 	JavaVMAttachArgs thread_spec = { JNI_VERSION_1_4, "FFmpegReadFromStream",
 			NULL };
 
@@ -1094,6 +1138,27 @@ void * player_read_from_stream(void *data) {
 		int ret = av_read_frame(player->input_format_ctx, pkt);
 		if (ret < 0) {
 			pthread_mutex_lock(&player->mutex_queue);
+			LOGI(3, "player_read_from_stream stream end");
+			queue = player->packets[player->video_stream_no];
+			packet_data = queue_push_start_already_locked(queue,
+					&player->mutex_queue, &player->cond_queue, &to_write,
+					(QueueCheckFunc) player_read_from_stream_check_func, player,
+					(void **) &interrupt_ret);
+			if (packet_data == NULL) {
+				if (interrupt_ret == READ_FROM_STREAM_CHECK_MSG_STOP) {
+					LOGI(2, "player_read_from_stream queue interrupt stop");
+					goto exit_loop;
+				} else if (interrupt_ret == READ_FROM_STREAM_CHECK_MSG_SEEK) {
+					LOGI(2, "player_read_from_stream queue interrupt seek");
+					goto seek_loop;
+				} else {
+					assert(FALSE);
+				}
+			}
+			packet_data->end_of_stream = 1;
+			LOGI(3, "player_read_from_stream sending end_of_stream packet");
+			queue_push_finish_already_locked(queue, &player->mutex_queue, &player->cond_queue, to_write);
+
 			for (;;) {
 				if (player->stop)
 					goto exit_loop;
@@ -1131,33 +1196,28 @@ void * player_read_from_stream(void *data) {
 			goto skip_loop;
 		}
 
-		AVPacket * new_packet;
-		int to_write;
-		int interrupt_ret;
-
 		push_start:
 		LOGI(10, "player_read_from_stream waiting for queue");
-		new_packet = queue_push_start_already_locked(queue,
+		packet_data = queue_push_start_already_locked(queue,
 				&player->mutex_queue, &player->cond_queue, &to_write,
 				(QueueCheckFunc) player_read_from_stream_check_func, player,
 				(void **) &interrupt_ret);
-		if (new_packet == NULL) {
+		if (packet_data == NULL) {
 			if (interrupt_ret == READ_FROM_STREAM_CHECK_MSG_STOP) {
 				LOGI(2, "player_read_from_stream queue interrupt stop");
-				goto exit_loop;
 			} else if (interrupt_ret == READ_FROM_STREAM_CHECK_MSG_SEEK) {
 				LOGI(2, "player_read_from_stream queue interrupt seek");
-				goto seek_loop;
 			} else {
 				assert(FALSE);
 			}
+			goto seek_loop;
 		}
 
 		pthread_mutex_unlock(&player->mutex_queue);
+		packet_data ->end_of_stream = FALSE;
+		*packet_data->packet = packet;
 
-		*new_packet = packet;
-
-		if (av_dup_packet(new_packet) < 0) {
+		if (av_dup_packet(packet_data->packet) < 0) {
 			err = ERROR_WHILE_DUPLICATING_FRAME;
 			pthread_mutex_lock(&player->mutex_queue);
 			goto exit_loop;
@@ -1328,10 +1388,20 @@ struct Player * player_get_player_field(JNIEnv *env, jobject thiz) {
 }
 
 void *player_fill_packet(struct Player *player) {
-	return malloc(sizeof(AVPacket));
+	struct PacketData *packet_data = malloc(sizeof(struct PacketData));
+	if (packet_data == NULL) {
+		return NULL;
+	}
+	packet_data->packet = malloc(sizeof(AVPacket));
+	if (packet_data->packet == NULL) {
+		free(packet_data);
+		return NULL;
+	}
+	return packet_data;
 }
 
-void player_free_packet(struct Player *player, AVPacket *elem) {
+void player_free_packet(struct Player *player, struct PacketData *elem) {
+	free(elem->packet);
 	free(elem);
 }
 
@@ -1434,9 +1504,16 @@ void player_update_time(struct State *state, double time) {
 	if (time_int > player->video_duration)
 		player->video_duration = time_int;
 
+	player_update_current_time(state, FALSE);
+}
+
+void player_update_current_time(struct State *state, int is_finished) {
+	struct Player *player = state->player;
+	jboolean jis_finished = is_finished ? JNI_TRUE : JNI_FALSE;
+
 	(*state->env)->CallVoidMethod(state->env, state->thiz,
-			player->player_on_update_time_method, time_int,
-			player->video_duration);
+			player->player_on_update_time_method, player->last_updated_time,
+			player->video_duration, jis_finished);
 }
 
 void player_open_stream_free(struct Player *player, int stream_no) {
@@ -2753,6 +2830,13 @@ jobject jni_player_render_frame(JNIEnv *env, jobject thiz) {
 		if (elem == NULL) {
 			skip = TRUE;
 		} else {
+			if (elem->end_of_stream) {
+				LOGI(4, "jni_player_render_frame end of stream");
+				player_update_current_time(&state, TRUE);
+				queue_pop_finish_already_locked(player->rgb_video_frames,
+						&player->mutex_queue, &player->cond_queue);
+				goto pop;
+			}
 			QueueCheckFuncRet ret;
 			test: ret = player_render_frame_check_func(player->rgb_video_frames,
 					player, &interrupt_ret);
