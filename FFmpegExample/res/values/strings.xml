@@ -14,5 +14,6 @@
     <string name="unknown">Unknown</string>
     <string name="dialog_end_of_video_title">End of video</string>
     <string name="dialog_end_of_video_message">End of video occure</string>
+    <string name="main_could_not_open_stream">Could not open stream</string>
 
 </resources>

@@ -9,7 +9,7 @@ import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
-import com.ffmpegtest.R;
+import com.appunite.ffmpeg.R;
 
 public class SeekerView extends View {
 	
