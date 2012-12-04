@@ -200,7 +200,10 @@ public class FFmpegPlayer {
 
 		@Override
 		public void run() {
-			getMpegListener().onFFUpdateTime(mCurrentTimeS, mVideoDurationS, mIsFinished);
+			if (mpegListener != null) {
+				mpegListener.onFFUpdateTime(mCurrentTimeS,
+					mVideoDurationS, mIsFinished);
+			}
 		}
 
 	};
