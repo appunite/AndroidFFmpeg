@@ -15,5 +15,8 @@
     <string name="dialog_end_of_video_title">End of video</string>
     <string name="dialog_end_of_video_message">End of video occure</string>
     <string name="main_could_not_open_stream">Could not open stream</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="menu_settings">Settings</string>
+    <string name="title_activity_main">MainActivity</string>
 
 </resources>
