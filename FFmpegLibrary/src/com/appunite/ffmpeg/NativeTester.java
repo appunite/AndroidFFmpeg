@@ -18,7 +18,7 @@
 
 package com.appunite.ffmpeg;
 
-public class NativeTester {
+class NativeTester {
 	static {
 		System.loadLibrary("nativetester-jni");
 	}

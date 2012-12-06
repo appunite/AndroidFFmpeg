@@ -213,7 +213,7 @@ public class FFmpegPlayer {
 	private FFmpegStreamInfo[] mStreamsInfos = null;
 	private boolean mIsFinished = false;
 
-	public static class RenderedFrame {
+	static class RenderedFrame {
 		public Bitmap bitmap;
 		public int height;
 		public int width;
@@ -244,13 +244,13 @@ public class FFmpegPlayer {
 
 	private native void stopNative();
 
-	public native void renderFrameStart();
+	native void renderFrameStart();
 
-	public native void renderFrameStop();
+	native void renderFrameStop();
 
-	private native Bitmap renderFrameNative() throws InterruptedException;
+	native Bitmap renderFrameNative() throws InterruptedException;
 
-	public native void releaseFrame();
+	native void releaseFrame();
 
 	private native void seekNative(int position) throws NotPlayingException;
 
@@ -371,7 +371,7 @@ public class FFmpegPlayer {
 		new SetDataSourceTask(this).execute(url, dictionary, videoStream, audioStream, subtitlesStream);
 	}
 
-	public RenderedFrame renderFrame() throws InterruptedException {
+	RenderedFrame renderFrame() throws InterruptedException {
 		this.mRenderedFrame.bitmap = this.renderFrameNative();
 		return this.mRenderedFrame;
 	}

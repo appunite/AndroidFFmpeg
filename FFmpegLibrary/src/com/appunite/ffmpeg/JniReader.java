@@ -48,7 +48,7 @@ public class JniReader {
 		position = 0;
 	}
 	
-	int read(byte[] buffer) {
+	public int read(byte[] buffer) {
 		int end = position + buffer.length;
 		if (end >= value.length)
 			end = value.length;
@@ -60,15 +60,15 @@ public class JniReader {
 		return length;
 	}
 	
-	int write(byte[] buffer) {
+	public int write(byte[] buffer) {
 		return 0;
 	}
 	
-	int check(int mask) {
+	public int check(int mask) {
 		return 0;
 	}
 	
-	long seek(long pos, int whence) {
+	public long seek(long pos, int whence) {
 		return -1;
 	}
 }

@@ -41,8 +41,8 @@ public class FpsCounter {
 		}
 
 		long stopTime = System.nanoTime();
-		double fps =
-				(double) this.frameCount * (1000.0 * 1000.0 * 1000.0) / (double) (stopTime - this.startTime);
+		double fps = (double) this.frameCount * (1000.0 * 1000.0 * 1000.0)
+				/ (double) (stopTime - this.startTime);
 		this.startTime = stopTime;
 		this.counter = 0;
 
