@@ -36,9 +36,10 @@ typedef QueueCheckFuncRet (*QueueCheckFunc)(Queue *queue, void* check_data,
 		void *check_ret_data);
 
 Queue *queue_init_with_custom_lock(int size, queue_fill_func fill_func,
-		queue_free_func free_func, void *obj, pthread_mutex_t *custom_lock,
-		pthread_cond_t *custom_cond);
-void queue_free(Queue *queue, pthread_mutex_t * mutex, pthread_cond_t *cond);
+		queue_free_func free_func, void *obj, void *free_obj,
+		pthread_mutex_t *custom_lock, pthread_cond_t *custom_cond);
+void queue_free(Queue *queue, pthread_mutex_t * mutex, pthread_cond_t *cond,
+		void *free_obj);
 
 void *queue_push_start_already_locked(Queue *queue, pthread_mutex_t * mutex,
 		pthread_cond_t *cond, int *to_write, QueueCheckFunc func,

@@ -34,7 +34,6 @@ struct _Queue {
 	int in_read;
 
 	queue_free_func free_func;
-	void * free_func_obj;
 
 	int is_custom_lock;
 	int size;
@@ -46,7 +45,7 @@ int queue_get_next(Queue *queue, int value) {
 }
 
 Queue *queue_init_with_custom_lock(int size, queue_fill_func fill_func,
-		queue_free_func free_func, void *obj, pthread_mutex_t *custom_lock,
+		queue_free_func free_func, void *obj, void *free_obj, pthread_mutex_t *custom_lock,
 		pthread_cond_t *custom_cond) {
 	Queue *queue = malloc(sizeof(Queue));
 	if (queue == NULL)
@@ -61,7 +60,6 @@ Queue *queue_init_with_custom_lock(int size, queue_fill_func fill_func,
 	queue->in_read = FALSE;
 
 	queue->free_func = free_func;
-	queue->free_func_obj = obj;
 
 	queue->is_custom_lock = TRUE;
 
@@ -84,7 +82,7 @@ Queue *queue_init_with_custom_lock(int size, queue_fill_func fill_func,
 		void *elem = queue->tab[i];
 		if (elem == NULL)
 			continue;
-		queue->free_func(queue->free_func_obj, elem);
+		queue->free_func(free_obj, elem);
 	}
 
 	free_tab: free(queue->tab);
@@ -97,7 +95,7 @@ Queue *queue_init_with_custom_lock(int size, queue_fill_func fill_func,
 	end: return queue;
 }
 
-void queue_free(Queue *queue, pthread_mutex_t * mutex, pthread_cond_t *cond) {
+void queue_free(Queue *queue, pthread_mutex_t * mutex, pthread_cond_t *cond, void *free_obj) {
 	pthread_mutex_lock(mutex);
 	while (queue->in_read)
 		pthread_cond_wait(cond, mutex);
@@ -105,7 +103,7 @@ void queue_free(Queue *queue, pthread_mutex_t * mutex, pthread_cond_t *cond) {
 	int i;
 	for (i = queue->size - 1; i >= 0; --i) {
 		void *elem = queue->tab[i];
-		queue->free_func(queue->free_func_obj, elem);
+		queue->free_func(free_obj, elem);
 	}
 	pthread_mutex_unlock(mutex);
 

@@ -1387,7 +1387,7 @@ struct Player * player_get_player_field(JNIEnv *env, jobject thiz) {
 	return player;
 }
 
-void *player_fill_packet(struct Player *player) {
+void *player_fill_packet(struct State *state) {
 	struct PacketData *packet_data = malloc(sizeof(struct PacketData));
 	if (packet_data == NULL) {
 		return NULL;
@@ -1400,7 +1400,7 @@ void *player_fill_packet(struct Player *player) {
 	return packet_data;
 }
 
-void player_free_packet(struct Player *player, struct PacketData *elem) {
+void player_free_packet(struct State *player, struct PacketData *elem) {
 	free(elem->packet);
 	free(elem);
 }
@@ -1409,18 +1409,18 @@ void *player_fill_subtitles_queue(struct DecoderState *decoder_state) {
 	return malloc(sizeof(struct SubtitleElem));
 }
 
-void player_free_subtitles_queue(struct DecoderState *decoder_state,
+void player_free_subtitles_queue(struct State *state,
 		struct SubtitleElem *elem) {
 	free(elem);
 }
 
-void player_free_video_rgb_frame(struct DecoderState *decoder_state,
+void player_free_video_rgb_frame(struct State *state,
 		struct VideoRGBFrameElem *elem) {
-	JNIEnv *env = decoder_state->env;
-	jobject thiz = decoder_state->thiz;
+	JNIEnv *env = state->env;
+	jobject thiz = state->thiz;
 
 	LOGI(7, "player_free_video_rgb_frame deleting global ref");
-//	(*env)->DeleteGlobalRef(env, elem->jbitmap); // TODO probably we could not use environment in this place
+	(*env)->DeleteGlobalRef(env, elem->jbitmap);
 	LOGI(7, "player_free_video_rgb_frame fryiing video frame");
 	av_free(elem->frame);
 	LOGI(7, "player_free_video_rgb_frame fryiing elem");
@@ -1489,6 +1489,15 @@ void *player_fill_video_rgb_frame(struct DecoderState *decoder_state) {
 
 }
 
+void player_update_current_time(struct State *state, int is_finished) {
+	struct Player *player = state->player;
+	jboolean jis_finished = is_finished ? JNI_TRUE : JNI_FALSE;
+
+	(*state->env)->CallVoidMethod(state->env, state->thiz,
+			player->player_on_update_time_method, player->last_updated_time,
+			player->video_duration, jis_finished);
+}
+
 void player_update_time(struct State *state, double time) {
 	int time_int = round(time);
 
@@ -1505,15 +1514,6 @@ void player_update_time(struct State *state, double time) {
 		player->video_duration = time_int;
 
 	player_update_current_time(state, FALSE);
-}
-
-void player_update_current_time(struct State *state, int is_finished) {
-	struct Player *player = state->player;
-	jboolean jis_finished = is_finished ? JNI_TRUE : JNI_FALSE;
-
-	(*state->env)->CallVoidMethod(state->env, state->thiz,
-			player->player_on_update_time_method, player->last_updated_time,
-			player->video_duration, jis_finished);
 }
 
 void player_open_stream_free(struct Player *player, int stream_no) {
@@ -1811,13 +1811,14 @@ int player_alloc_frames(struct Player *player) {
 	return 0;
 }
 
-int player_alloc_queues(struct Player *player) {
+int player_alloc_queues(struct State *state) {
+	struct Player *player = state->player;
 	int capture_streams_no = player->caputre_streams_no;
 	int stream_no;
 	for (stream_no = 0; stream_no < capture_streams_no; ++stream_no) {
 		player->packets[stream_no] = queue_init_with_custom_lock(100,
 				(queue_fill_func) player_fill_packet,
-				(queue_free_func) player_free_packet, player,
+				(queue_free_func) player_free_packet, state, state,
 				&player->mutex_queue, &player->cond_queue);
 		if (player->packets[stream_no] == NULL) {
 			return -ERROR_COULD_NOT_PREPARE_PACKETS_QUEUE;
@@ -1825,33 +1826,36 @@ int player_alloc_queues(struct Player *player) {
 	}
 	return 0;
 }
-void player_alloc_queues_free(struct Player *player) {
+void player_alloc_queues_free(struct State *state) {
+	struct Player *player = state->player;
 	int capture_streams_no = player->caputre_streams_no;
 	int stream_no;
 	for (stream_no = 0; stream_no < capture_streams_no; ++stream_no) {
 		if (player->packets[stream_no] != NULL) {
 			queue_free(player->packets[stream_no], &player->mutex_queue,
-					&player->cond_queue);
+					&player->cond_queue, state);
 			player->packets[stream_no] = NULL;
 		}
 	}
 }
 #ifdef SUBTITLES
-void player_prepare_subtitles_queue_free(struct Player *player) {
+void player_prepare_subtitles_queue_free(struct State *state) {
+	struct Player *player = state->player;
 	if (player->subtitles_queue != NULL) {
 		LOGI(7, "player_set_data_source free_subtitles_frames_queue");
 		queue_free(player->subtitles_queue, &player->mutex_queue,
-				&player->cond_queue);
+				&player->cond_queue, state);
 		player->subtitles_queue = NULL;
 	}
 }
 
-int player_prepare_subtitles_queue(struct DecoderState *decoder_state) {
+int player_prepare_subtitles_queue(struct DecoderState *decoder_state,
+		struct State *state) {
 	struct Player *player = decoder_state->player;
 
 	player->subtitles_queue = queue_init_with_custom_lock(30,
 			(queue_fill_func) player_fill_subtitles_queue,
-			(queue_free_func) player_free_subtitles_queue, decoder_state,
+			(queue_free_func) player_free_subtitles_queue, decoder_state, state,
 			&player->mutex_queue, &player->cond_queue);
 	if (player->subtitles_queue == NULL) {
 		return -ERROR_COULD_NOT_PREPARE_SUBTITLES_QUEUE;
@@ -1859,23 +1863,24 @@ int player_prepare_subtitles_queue(struct DecoderState *decoder_state) {
 	return 0;
 }
 #endif // SUBTITLES
-void player_prepare_rgb_frames_free(struct Player *player) {
+void player_prepare_rgb_frames_free(struct State *state) {
+	struct Player *player = state->player;
 	if (player->rgb_video_frames != NULL) {
 		LOGI(7, "player_set_data_source free_video_frames_queue");
 		queue_free(player->rgb_video_frames, &player->mutex_queue,
-				&player->cond_queue);
+				&player->cond_queue, state);
 		player->rgb_video_frames = NULL;
 		LOGI(7, "player_set_data_source fried_video_frames_queue");
 	}
 }
 
-int player_prepare_rgb_frames(struct DecoderState *decoder_state) {
+int player_prepare_rgb_frames(struct DecoderState *decoder_state, struct State *state) {
 	struct Player *player = decoder_state->player;
 
 	player->rgb_video_frames = queue_init_with_custom_lock(8,
 			(queue_fill_func) player_fill_video_rgb_frame,
 			(queue_free_func) player_free_video_rgb_frame, decoder_state,
-			&player->mutex_queue, &player->cond_queue);
+			state, &player->mutex_queue, &player->cond_queue);
 	if (player->rgb_video_frames == NULL) {
 		return -ERROR_COULD_NOT_PREPARE_RGB_QUEUE;
 	}
@@ -2236,10 +2241,10 @@ void player_stop_without_lock(struct State * state) {
 	player_create_audio_track_free(player, state);
 	player_preapre_sws_context_free(player);
 #ifdef SUBTITLES
-	player_prepare_subtitles_queue_free(player);
+	player_prepare_subtitles_queue_free(state);
 #endif // SUBTITLES
-	player_prepare_rgb_frames_free(player);
-	player_alloc_queues_free(player);
+	player_prepare_rgb_frames_free(state);
+	player_alloc_queues_free(state);
 	player_alloc_frames_free(player);
 #ifdef SUBTITLES
 	player_prepare_ass_decoder_free(player);
@@ -2336,20 +2341,20 @@ int player_set_data_source(struct State *state, const char *file_path,
 	if ((err = player_alloc_frames(player)) < 0)
 		goto error;
 
-	if ((err = player_alloc_queues(player)) < 0)
+	if ((err = player_alloc_queues(state)) < 0)
 		goto error;
 
 	struct DecoderState video_decoder_state = { stream_no
 			: player->video_stream_no, player: player, env:state->env, thiz
 			: state->thiz };
-	if ((err = player_prepare_rgb_frames(&video_decoder_state)) < 0)
+	if ((err = player_prepare_rgb_frames(&video_decoder_state, state)) < 0)
 		goto error;
 #ifdef SUBTITLES
 	if (player->subtitle_stream_no >= 0) {
 		struct DecoderState subtitle_decoder_state = { stream_no
 				: player->subtitle_stream_no, player: player, env:state->env,
 				thiz: state->thiz };
-		if ((err = player_prepare_subtitles_queue(&subtitle_decoder_state)) < 0)
+		if ((err = player_prepare_subtitles_queue(&subtitle_decoder_state, state)) < 0)
 			goto error;
 	}
 #endif // SUBTITLES
@@ -2381,10 +2386,10 @@ int player_set_data_source(struct State *state, const char *file_path,
 	player_create_audio_track_free(player, state);
 	player_preapre_sws_context_free(player);
 #ifdef SUBTITLES
-	player_prepare_subtitles_queue_free(player);
+	player_prepare_subtitles_queue_free(state);
 #endif // SUBTITLES
-	player_prepare_rgb_frames_free(player);
-	player_alloc_queues_free(player);
+	player_prepare_rgb_frames_free(state);
+	player_alloc_queues_free(state);
 	player_alloc_frames_free(player);
 #ifdef SUBTITLES
 	player_prepare_ass_decoder_free(player);
