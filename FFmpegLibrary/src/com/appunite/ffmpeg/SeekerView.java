@@ -174,8 +174,9 @@ public class SeekerView extends View {
 
 		dw = (mBorderWidth + mBorderPadding) * 2 + mBarMinWidth;
 		dh = (mBorderWidth + mBorderPadding) * 2 + mBarMinHeight;
-		this.setMeasuredDimension(resolveSizeAndState(dw, widthMeasureSpec, 0),
-				resolveSizeAndState(dh, heightMeasureSpec, 0));
+		this.setMeasuredDimension(
+				ViewCompat.resolveSizeAndState(dw, widthMeasureSpec, 0),
+				ViewCompat.resolveSizeAndState(dh, heightMeasureSpec, 0));
 	}
 	
 	private void calculateBarRect() {
