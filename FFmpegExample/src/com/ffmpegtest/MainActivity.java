@@ -73,7 +73,21 @@ public class MainActivity extends Activity implements OnItemClickListener {
 				"Encrypted file",
 				getSDCardFile("encrypted.mp4"),
 				"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" });
-		
+		cursor.addRow(new Object[] {
+				1,
+				"JWillIAm-CheckItOut_ENG.mp4",
+				getSDCardFile("airbender/videos/WillIAm-CheckItOut_ENG.mp4"),
+				null });
+		cursor.addRow(new Object[] {
+				1,
+				"HungerGamesTrailer1200.mp4",
+				getSDCardFile("airbender/videos/HungerGamesTrailer1200.mp4"),
+				null });
+		cursor.addRow(new Object[] {
+				1,
+				"HungerGamesTrailer800.mp4",
+				getSDCardFile("airbender/videos/HungerGamesTrailer800.mp4"),
+				null });
 		
 		mAdapter = new MainAdapter(this);
 		mAdapter.swapCursor(cursor);

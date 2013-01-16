@@ -43,7 +43,7 @@ ifeq ($(TARGET_ARCH_ABI),$(filter $(TARGET_ARCH_ABI),armeabi armeabi-v7a))
 	#LIBRARY_PROFILER:=yes
 
 	# add yuv2rgb (only arm)
-	LIBRARY_YUV2RGB:=yes
+	#LIBRARY_YUV2RGB:=yes
 endif
 
 
