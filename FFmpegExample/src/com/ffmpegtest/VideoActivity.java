@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 
+import android.animation.ObjectAnimator;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -33,6 +34,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.graphics.PixelFormat;
+import android.graphics.RectF;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -41,6 +43,7 @@ import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
@@ -56,12 +59,17 @@ import com.appunite.ffmpeg.FFmpegError;
 import com.appunite.ffmpeg.FFmpegListener;
 import com.appunite.ffmpeg.FFmpegPlayer;
 import com.appunite.ffmpeg.FFmpegStreamInfo;
+import com.appunite.ffmpeg.FFmpegSurfaceView;
 import com.appunite.ffmpeg.FFmpegStreamInfo.CodecType;
+import com.appunite.ffmpeg.FFmpegSurfaceView.ScaleType;
 import com.appunite.ffmpeg.NotPlayingException;
+
+import com.ffmpegtest.helpers.PropertyDestinationRect;
+import com.ffmpegtest.helpers.RectEvaluator;
 
 public class VideoActivity extends Activity implements OnClickListener,
 		FFmpegListener, OnSeekBarChangeListener, OnItemSelectedListener {
-
+	
 	private FFmpegPlayer mpegPlayer;
 	private static boolean isSurfaceView = true;
 	protected boolean mPlay = false;
@@ -81,6 +89,7 @@ public class VideoActivity extends Activity implements OnClickListener,
 
 	private FFmpegStreamInfo audioStream = null;
 	private FFmpegStreamInfo subtitleStream = null;
+	private View scaleButton;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -107,6 +116,9 @@ public class VideoActivity extends Activity implements OnClickListener,
 
 		playPauseButton = (Button) this.findViewById(R.id.play_pause);
 		playPauseButton.setOnClickListener(this);
+		
+		scaleButton = this.findViewById(R.id.scale_type);
+		scaleButton.setOnClickListener(this);
 
 		controlsView = this.findViewById(R.id.controls);
 		streamsView = this.findViewById(R.id.streams);
@@ -131,6 +143,7 @@ public class VideoActivity extends Activity implements OnClickListener,
 		subtitleSpinner.setOnItemSelectedListener(this);
 
 		videoView = this.findViewById(R.id.video_view);
+		((FFmpegSurfaceView)videoView).setScaleType(ScaleType.CENTER_INSIDE, false);
 		this.mpegPlayer = new FFmpegPlayer((FFmpegDisplay) videoView, this);
 		this.mpegPlayer.setMpegListener(this);
 		setDataSource();
@@ -244,9 +257,42 @@ public class VideoActivity extends Activity implements OnClickListener,
 		case R.id.play_pause:
 			resumePause();
 			return;
-
+		case R.id.scale_type:
+			swapScaleType();
+			return;
 		default:
 			throw new RuntimeException();
+		}
+	}
+
+	@TargetApi(Build.VERSION_CODES.ICE_CREAM_SANDWICH)
+	private void swapScaleType() {
+		FFmpegSurfaceView view = (FFmpegSurfaceView)videoView;
+		FFmpegSurfaceView.ScaleType scaleType = view.getScaleType();
+		ScaleType newScaleType;
+		if (ScaleType.CENTER_INSIDE.equals(scaleType)) {
+			newScaleType = ScaleType.CENTER_CROP;
+		} else if (ScaleType.CENTER_CROP.equals(scaleType)) {
+			newScaleType = ScaleType.FIT_XY;
+		} else {
+			newScaleType = ScaleType.CENTER_INSIDE;
+		}
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+			view.setScaleType(newScaleType, true);
+			RectF dst = new RectF();
+			view.calculateRect(dst, newScaleType);
+			ObjectAnimator anim = ObjectAnimator.ofObject(view, "destinationRect", new RectEvaluator(), dst);
+			anim.setInterpolator(new AccelerateDecelerateInterpolator());
+			anim.start();
+		} else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
+			view.setScaleType(newScaleType, true);
+			RectF dst = new RectF();
+			view.calculateRect(dst, newScaleType);
+			ObjectAnimator anim = ObjectAnimator.ofObject(view, new PropertyDestinationRect(), new RectEvaluator(), dst);
+			anim.setInterpolator(new AccelerateDecelerateInterpolator());
+			anim.start();
+		} else {
+			view.setScaleType(newScaleType, false);
 		}
 	}
 

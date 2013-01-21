@@ -20,7 +20,7 @@
             android:layout_width="0dip"
             android:layout_height="wrap_content"
             android:layout_weight="1" />
-        
+
         <Spinner
             android:id="@+id/subtitle_spinner"
             android:layout_width="0dip"
@@ -46,21 +46,29 @@
             android:contentDescription="@null"
             android:enabled="false" />
 
+        <Button
+            android:id="@+id/scale_type"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@+id/play_pause"
+            android:background="@android:drawable/ic_menu_info_details"
+            android:enabled="true" />
+
         <SeekBar
             android:id="@+id/seek_bar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_alignParentRight="true"
             android:layout_centerVertical="true"
-            android:layout_toRightOf="@+id/play_pause" />
+            android:layout_toRightOf="@+id/scale_type" />
     </RelativeLayout>
-    
+
     <com.appunite.ffmpeg.FFmpegSurfaceView
         android:id="@+id/video_view"
-        android:layout_below="@+id/streams"
-        android:layout_above="@+id/controls"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
+        android:layout_above="@+id/controls"
+        android:layout_below="@+id/streams"
         android:visibility="invisible" />
 
     <ProgressBar
