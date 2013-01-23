@@ -53,6 +53,11 @@ enum CodecType {
 	CODEC_TYPE_DATA = 6
 };
 
+enum StreamNumber {
+	NO_STREAM = -2,
+	UNKNOWN_STREAM = -1,
+};
+
 // FFmpegStreamInfo
 static char *stream_info_class_path_name = "com/appunite/ffmpeg/FFmpegStreamInfo";
 static JavaMethod steram_info_set_metadata = {"setMetadata", "(Ljava/util/Map;)V"};

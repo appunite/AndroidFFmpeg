@@ -2327,9 +2327,13 @@ int player_set_data_source(struct State *state, const char *file_path,
 		goto error;
 	}
 #ifdef SUBTITLES
-	if ((player->subtitle_stream_no = player_find_stream(player,
-			AVMEDIA_TYPE_SUBTITLE, subtitle_stream_no)) < 0) {
-		// if no subtitles - just go without it
+	if (subtitle_stream_no == NO_STREAM) {
+		player->subtitle_stream_no = -1;
+	} else {
+		if ((player->subtitle_stream_no = player_find_stream(player,
+				AVMEDIA_TYPE_SUBTITLE, subtitle_stream_no)) < 0) {
+			// if no subtitles - just go without it
+		}
 	}
 
 	if ((player->subtitle_stream_no >= 0)) {

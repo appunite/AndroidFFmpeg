@@ -30,26 +30,6 @@ public class MainActivity extends Activity implements OnItemClickListener {
 		MatrixCursor cursor = new MatrixCursor(MainAdapter.PROJECTION);
 		cursor.addRow(new Object[] {
 				1,
-				"Jasmine Sullivan unencrypted",
-				getSDCardFile("airbender/videos/JasmineSullivan-DreamBig_ENG-ENCODESTREAM.mp4"),
-				null });
-		cursor.addRow(new Object[] {
-				1,
-				"Jennifer Hudson unencrypted",
-				getSDCardFile("airbender/videos/JenniferHudson-IfThisIsntLove_ENG-ENCODESTREAM.mp4"),
-				null });
-		cursor.addRow(new Object[] {
-				1,
-				"Kings Of Leon-Charmer unencrypted",
-				getSDCardFile("airbender/videos/KingsOfLeon-Charmer_ENG-ENCODESTREAM.mp4"),
-				null });
-		cursor.addRow(new Object[] {
-				1,
-				"Kings Of Leon-Charmer unencrypted",
-				getSDCardFile("airbender/videos/Lenka-TheShow_ENG-ENCODESTREAM.mp4"),
-				null });
-		cursor.addRow(new Object[] {
-				1,
 				"Kings Of Leon-Charmer unencrypted",
 				getSDCardFile("airbender/videos/Videoguides-Riga_SIL_engrus_1500.mp4"),
 				null });
@@ -69,29 +49,58 @@ public class MainActivity extends Activity implements OnItemClickListener {
 				"https://devimages.apple.com.edgekey.net/resources/http-streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8",
 				null });
 		cursor.addRow(new Object[] {
-				1,
+				5,
 				"Encrypted file",
 				getSDCardFile("encrypted.mp4"),
 				"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" });
 		cursor.addRow(new Object[] {
-				1,
+				6,
 				"JWillIAm-CheckItOut_ENG.mp4",
 				getSDCardFile("airbender/videos/WillIAm-CheckItOut_ENG.mp4"),
 				null });
 		cursor.addRow(new Object[] {
-				1,
+				7,
 				"HungerGamesTrailer1200.mp4",
 				getSDCardFile("airbender/videos/HungerGamesTrailer1200.mp4"),
 				null });
 		cursor.addRow(new Object[] {
-				1,
+				8,
 				"HungerGamesTrailer800.mp4",
 				getSDCardFile("airbender/videos/HungerGamesTrailer800.mp4"),
 				null });
-		
+		cursor.addRow(new Object[] {
+				9,
+				"TheThreeStooges_ENGRUS_engjapchi.mp4",
+				getSDCardFile("airbender/videos/TheThreeStooges_ENGRUS_engjapchi.mp4"),
+				null });
+		cursor.addRow(new Object[] {
+				10,
+				"Jasmine Sullivan unencrypted",
+				getSDCardFile("airbender/videos/JasmineSullivan-DreamBig_ENG-ENCODESTREAM.mp4"),
+				null });
+		cursor.addRow(new Object[] {
+				11,
+				"Jennifer Hudson unencrypted",
+				getSDCardFile("airbender/videos/JenniferHudson-IfThisIsntLove_ENG-ENCODESTREAM.mp4"),
+				null });
+		cursor.addRow(new Object[] {
+				12,
+				"Kings Of Leon-Charmer unencrypted",
+				getSDCardFile("airbender/videos/KingsOfLeon-Charmer_ENG-ENCODESTREAM.mp4"),
+				null });
+		cursor.addRow(new Object[] {
+				13,
+				"Kings Of Leon-Charmer unencrypted",
+				getSDCardFile("airbender/videos/Lenka-TheShow_ENG-ENCODESTREAM.mp4"),
+				null });
+		cursor.addRow(new Object[] {
+				13,
+				"ThreeMenInABoatToSayNothingOfTheDog_RUS_eng_1500.mp4.enc",
+				getSDCardFile("airbender/videos/ThreeMenInABoatToSayNothingOfTheDog_RUS_eng_1500.mp4.enc"),
+				"fNFyiU34+Pw4iU6QqazxUZ/+pUMWXQTq" });
 		mAdapter = new MainAdapter(this);
 		mAdapter.swapCursor(cursor);
-		
+
 		mListView = (ListView) findViewById(android.R.id.list);
 		mListView.setAdapter(mAdapter);
 		mListView.setOnItemClickListener(this);

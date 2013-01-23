@@ -69,13 +69,13 @@ public class FFmpegPlayer {
 			String url = (String) params[0];
 			@SuppressWarnings("unchecked")
 			Map<String, String> map = (Map<String, String>) params[1];
-			FFmpegStreamInfo videoStream = (FFmpegStreamInfo) params[2];
-			FFmpegStreamInfo audioStream = (FFmpegStreamInfo) params[3];
-			FFmpegStreamInfo subtitleStream = (FFmpegStreamInfo) params[4];
+			Integer videoStream = (Integer) params[2];
+			Integer audioStream = (Integer) params[3];
+			Integer subtitleStream = (Integer) params[4];
 			
-			int videoStreamNo = videoStream == null ? -1 : videoStream.getStreamNumber();
-			int audioStreamNo = audioStream == null ? -1 : audioStream.getStreamNumber();
-			int subtitleStreamNo = subtitleStream == null ? -1 : subtitleStream.getStreamNumber();
+			int videoStreamNo = videoStream == null ? -1 : videoStream.intValue();
+			int audioStreamNo = audioStream == null ? -1 : audioStream.intValue();
+			int subtitleStreamNo = subtitleStream == null ? -1 : subtitleStream.intValue();
 			
 			int err = player.setDataSourceNative(url, map, videoStreamNo, audioStreamNo, subtitleStreamNo);
 			SetDataSourceTaskResult result = new SetDataSourceTaskResult();
@@ -190,6 +190,8 @@ public class FFmpegPlayer {
 		}
 	}
 
+	public static final int UNKNOWN_STREAM = -1;
+	public static final int NO_STREAM = -2;
 	private FFmpegListener mpegListener = null;
 	private final RenderedFrame mRenderedFrame = new RenderedFrame();
 
@@ -360,15 +362,16 @@ public class FFmpegPlayer {
 	private void setVideoListener(FFmpegListener mpegListener) {
 		this.setMpegListener(mpegListener);
 	}
-
+	
 	public void setDataSource(String url) {
-		setDataSource(url, null, null, null, null);
+		setDataSource(url, null, UNKNOWN_STREAM, UNKNOWN_STREAM, NO_STREAM);
 	}
 
 	public void setDataSource(String url, Map<String, String> dictionary,
-			FFmpegStreamInfo videoStream, FFmpegStreamInfo audioStream,
-			FFmpegStreamInfo subtitlesStream) {
-		new SetDataSourceTask(this).execute(url, dictionary, videoStream, audioStream, subtitlesStream);
+			int videoStream, int audioStream, int subtitlesStream) {
+		new SetDataSourceTask(this).execute(url, dictionary,
+				Integer.valueOf(videoStream), Integer.valueOf(audioStream),
+				Integer.valueOf(subtitlesStream));
 	}
 
 	RenderedFrame renderFrame() throws InterruptedException {

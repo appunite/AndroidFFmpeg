@@ -53,7 +53,7 @@ public class FFmpegStreamInfo {
 		this.mStreamNumber = streamNumber;
 	}
 	
-	int getStreamNumber() {
+	public int getStreamNumber() {
 		return this.mStreamNumber;
 	}
 	
