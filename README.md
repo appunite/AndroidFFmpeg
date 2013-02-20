@@ -3,14 +3,12 @@ This project aims to create **working** library providing playing and converting
 We rather want to use ffmpeg library without modifications to facilitate updating of ffmpeg core.
 
 ![Application screenshot](http://s12.postimage.org/o528w8jst/Screenshot1.png)
- 
-## Info
+
 This project aim to simplify compilation of FFmpeg for android different architectures to one big apk file.
 
 ## Moved source code
 I moved project source code to our company review system https://review.appunite.com
-because I am used to benefit from review systems like Gerrit. There you can find newest not yet accepted source code. If you do not care of newest source code or contributing software you can just use github where you can reaches accepted
-commits.
+because I am used to benefit from review systems like Gerrit. There you can find newest not yet accepted source code. If you do not care of newest source code or contributing software you can just use github where you can reaches accepted commits.
 
 	git clone https://review.appunite.com/androidffmpeg
 	
@@ -35,11 +33,15 @@ you have to install:
 - autoconf
 - autoconf-archive
 - automake
+- pkg-config
 
 on Debian/Ubuntu - you can use apt-get
 
 on Mac - you can use tool brew from homebrew project. You have additionally install xcode. 
 
+## Bug reporting
+
+**Please read instruciton very carefully**. A lot of people had trouble because they did not read this with attention. **If you have some problem do not send me emails**. First: look on past issues on github. Than: try figure out problem with google. If you did not find solution then you can ask on github issue tracker.
 
 ## Installation
 
@@ -50,7 +52,7 @@ if you have a problem with certificate add *GIT\_SSL\_NO\_VERIFY=true* before gi
 
 Im sorry about this certificate issue, but never is enough time to fix problems like those
 
-**If you have ssh key in our review system** you should setup global alias in *~/.gitconfig* file.
+**If (only if) you have ssh key in appunite review system** you should setup global alias in *~/.gitconfig* file.
 
 	git config --global url.ssh://review.appunite.com.insteadOf https://review.appunite.com
 
@@ -100,11 +102,13 @@ build external libraries
 	export NDK=/your/path/to/android-ndk
 	./build_android.sh
 	
-make sure that files FFmpegLibrary/libs/{armeabi,armeabi-v7a,x86}/libffmpeg.so was created, otherwise you are in truble
+make sure that files FFmpegLibrary/jni/ffmpeg-build/{armeabi,armeabi-v7a,x86}/libffmpeg.so was created, otherwise you are in truble
 
 build ndk jni library
 
 	ndk-build
+
+make sure that files FFmpegLibrary/libs/{armeabi,armeabi-v7a,x86}/libffmpeg.so was created, otherwise you are in truble
 
 build your project
 
@@ -132,7 +136,7 @@ If you nead more codecs:
 		
 	During this process make sure that ffmpeg configuration goes without error.
 	
-	After build make sure that files FFmpegLibrary/libs/{armeabi,armeabi-v7a,x86}/libffmpeg.so was created, otherwise you are in truble
+	After build make sure that files FFmpegLibrary/jni/ffmpeg-build/{armeabi,armeabi-v7a,x86}/libffmpeg.so was created, otherwise you are in truble
 
 - build your ndk library
 
