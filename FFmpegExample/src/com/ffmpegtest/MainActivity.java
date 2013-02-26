@@ -35,8 +35,8 @@ public class MainActivity extends Activity implements OnItemClickListener {
 				null });
 		cursor.addRow(new Object[] {
 				2,
-				"Hungers games trailer",
-				"http://192.168.1.105:1935/vod/mp4:HungerGamesTrailer800.mp4/playlist.m3u8",
+				"TheThreeStooges",
+				"http://192.168.0.200:81/TheThreeStooges_ENGRUS_engjapchi.mp4",
 				null });
 		cursor.addRow(new Object[] {
 				3,

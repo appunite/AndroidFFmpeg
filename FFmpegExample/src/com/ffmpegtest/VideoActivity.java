@@ -34,6 +34,7 @@ import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.graphics.PixelFormat;
 import android.graphics.RectF;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -178,16 +179,24 @@ public class VideoActivity extends Activity implements OnClickListener,
 		params.put("ass_default_font_path", assFont.getAbsolutePath());
 		
 		Intent intent = getIntent();
-		String url = intent
-				.getStringExtra(AppConstants.VIDEO_PLAY_ACTION_EXTRA_URL);
-		if (url == null) {
-			throw new IllegalArgumentException(String.format(
-					"\"%s\" did not provided",
-					AppConstants.VIDEO_PLAY_ACTION_EXTRA_URL));
-		}
-		if (intent
-				.hasExtra(AppConstants.VIDEO_PLAY_ACTION_EXTRA_ENCRYPTION_KEY)) {
-			params.put("aeskey", intent.getStringExtra(AppConstants.VIDEO_PLAY_ACTION_EXTRA_ENCRYPTION_KEY));
+		Uri uri = intent.getData();
+		String url;
+		if (uri != null) {
+			url = uri.toString();
+		} else {
+			url = intent
+					.getStringExtra(AppConstants.VIDEO_PLAY_ACTION_EXTRA_URL);
+			if (url == null) {
+				throw new IllegalArgumentException(String.format(
+						"\"%s\" did not provided",
+						AppConstants.VIDEO_PLAY_ACTION_EXTRA_URL));
+			}
+			if (intent
+					.hasExtra(AppConstants.VIDEO_PLAY_ACTION_EXTRA_ENCRYPTION_KEY)) {
+				params.put(
+						"aeskey",
+						intent.getStringExtra(AppConstants.VIDEO_PLAY_ACTION_EXTRA_ENCRYPTION_KEY));
+			}
 		}
 
 		this.mPlayPauseButton

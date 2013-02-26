@@ -50,6 +50,9 @@ public class FFmpegSurfaceView extends SurfaceView implements FFmpegDisplay,
 	private Rect mRectSurface;
 	private ScaleType mScaleType;
 	private Object mDrawFrameLock;
+	private Paint mBitmapPaint;
+	private RectF mRectF;
+	private Rect mRect;
 
 	public FFmpegSurfaceView(Context context) {
 		this(context, null, 0);
@@ -69,11 +72,18 @@ public class FFmpegSurfaceView extends SurfaceView implements FFmpegDisplay,
 		mPaint.setColor(Color.RED);
 		mFpsCounter = new FpsCounter(10);
 		
+		mBitmapPaint = new Paint();
+		mBitmapPaint.setAntiAlias(false);
+		mBitmapPaint.setFilterBitmap(false);
+		
+		
 		mRectSurface = new Rect();
 		mRectVideo = new Rect();
 		mRectFDestination = new RectF();
 		mScaleType = ScaleType.CENTER_INSIDE;
 		mDrawFrameLock = new Object();
+		mRectF = new RectF();
+		mRect = new Rect();
 	}
 
 	@Override
@@ -162,7 +172,7 @@ public class FFmpegSurfaceView extends SurfaceView implements FFmpegDisplay,
 					calculateRect(mRectFDestination, mScaleType);
 				}
 
-				canvas.drawBitmap(renderFrame.bitmap, null, mRectFDestination, null);
+				canvas.drawBitmap(renderFrame.bitmap, null, mRectFDestination, mBitmapPaint);
 				drawFpsCounter(canvas, 0.0f, 0.0f);
 			} finally {
 				mSurfaceHolder.unlockCanvasAndPost(canvas);
@@ -209,10 +219,12 @@ public class FFmpegSurfaceView extends SurfaceView implements FFmpegDisplay,
 					throw new IllegalArgumentException("Unknown scale type");
 				}
 
-				dstRectF.set(0, 0, mRectVideo.width() * ratio,
+				mRectF.set(0, 0, mRectVideo.width() * ratio,
 						mRectVideo.height() * ratio);
-				dstRectF.offset((mRectSurface.width() - dstRectF.width()) / 2.0f,
-						(mRectSurface.height() - dstRectF.height()) / 2.0f);
+				mRectF.offset((mRectSurface.width() - mRectF.width()) / 2.0f,
+						(mRectSurface.height() - mRectF.height()) / 2.0f);
+				mRectF.round(mRect);
+				dstRectF.set(mRect);
 			}
 		}
 	}
