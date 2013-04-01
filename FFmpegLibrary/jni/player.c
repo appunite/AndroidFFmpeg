@@ -670,6 +670,10 @@ void player_update_time(struct State *state, int is_finished) {
 	int64_t current_video_time = player_get_current_video_time(player);
 	int64_t time_diff = player->last_updated_time - current_video_time;
 
+	if (is_finished) {
+		inform_user = TRUE;
+	}
+
 	if (time_diff > 500000ll || time_diff < -500000ll) {
 		player->last_updated_time = current_video_time;
 		inform_user = TRUE;
@@ -1005,10 +1009,6 @@ int player_decode_video(struct DecoderData * decoder_data, JNIEnv * env,
 
 	ANativeWindow_unlockAndPost(window);
 
-	// TODO FIXME
-	struct State state = {player: player, env:env};
-	player_update_time(&state, packet_data->end_of_stream);
-
 fail_lock_bitmap:
 	return err;
 }
@@ -1079,6 +1079,10 @@ void * player_decode(void * data) {
 		{
 			assert(FALSE);
 		}
+
+		struct State state = {player: player, env:env};
+		player_update_time(&state, packet_data->end_of_stream);
+
 #ifdef MEASURE_TIME
 		char * type = "unknown";
 		if (codec_type == AVMEDIA_TYPE_AUDIO) {
@@ -1243,7 +1247,7 @@ void * player_read_from_stream(void *data) {
 					assert(FALSE);
 				}
 			}
-			packet_data->end_of_stream = 1;
+			packet_data->end_of_stream = TRUE;
 			LOGI(3, "player_read_from_stream sending end_of_stream packet");
 			queue_push_finish_already_locked(queue, &player->mutex_queue,
 					&player->cond_queue, to_write);
