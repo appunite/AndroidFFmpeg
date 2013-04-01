@@ -1,6 +1,7 @@
 /*
- * sync.h
- * Copyright (c) 2013 Jacek Marchwicki
+ * player.c
+ * ffstagefright.h
+ * Copyright (c) 2012 Jacek Marchwicki from Appunite.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +17,25 @@
  *
  */
 
-#ifndef SYNC_H_
-#define SYNC_H_
+#ifndef FFSTAGEFRIGHT_H_
+#define FFSTAGEFRIGHT_H_
 
-enum WaitFuncRet {
-	WAIT_FUNC_RET_OK = 0,
-	WAIT_FUNC_RET_SKIP = 1,
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include "sync.h"
+
+struct StageFrightData {
+	void *data;
+	ANativeWindow *window;
+	WaitFunc *wait_func;
+	int stream_no;
 };
 
-typedef enum WaitFuncRet (WaitFunc) (void *data , double time, int stream_no);
+void register_stagefright_codec();
 
+#ifdef __cplusplus
+}
+#endif
 
-#endif /* SYNC_H_ */
+#endif /* FFSTAGEFRIGHT_H_ */

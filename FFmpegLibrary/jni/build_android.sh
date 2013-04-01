@@ -311,6 +311,7 @@ EOF
 	    --enable-decoder=amrwb \
 	    --enable-muxer=mp2 \
 	    --enable-bsfs \
+	    --enable-bsf=h264_mp4toannexb \
 	    --enable-decoders \
 	    --enable-encoders \
 	    --enable-parsers \

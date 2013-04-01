@@ -94,7 +94,7 @@ static const struct {
 // FFmpegPlayer
 static char *player_class_path_name = "com/appunite/ffmpeg/FFmpegPlayer";
 static JavaField player_m_native_player = {"mNativePlayer", "I"};
-static JavaMethod player_on_update_time = {"onUpdateTime","(JJZ)V"};
+static JavaMethod player_on_update_time = {"onUpdateTime","(IIZ)V"};
 static JavaMethod player_prepare_audio_track = {"prepareAudioTrack", "(II)Landroid/media/AudioTrack;"};
 static JavaMethod player_prepare_frame = {"prepareFrame", "(II)Landroid/graphics/Bitmap;"};
 static JavaMethod player_set_stream_info = {"setStreamsInfo", "([Lcom/appunite/ffmpeg/FFmpegStreamInfo;)V"};
@@ -115,7 +115,7 @@ static JavaMethod audio_track_get_sample_rate = {"getSampleRate", "()I"};
 int jni_player_init(JNIEnv *env, jobject thiz);
 void jni_player_dealloc(JNIEnv *env, jobject thiz);
 
-void jni_player_seek(JNIEnv *env, jobject thiz, jlong positionUs);
+void jni_player_seek(JNIEnv *env, jobject thiz, jint position);
 
 void jni_player_pause(JNIEnv *env, jobject thiz);
 void jni_player_resume(JNIEnv *env, jobject thiz);
@@ -128,7 +128,7 @@ void jni_player_stop(JNIEnv *env, jobject thiz);
 void jni_player_render_frame_start(JNIEnv *env, jobject thiz);
 void jni_player_render_frame_stop(JNIEnv *env, jobject thiz);
 
-jlong jni_player_get_video_duration(JNIEnv *env, jobject thiz);
+int jni_player_get_video_duration(JNIEnv *env, jobject thiz);
 void jni_player_render(JNIEnv *env, jobject thiz, jobject surface);
 
 static JNINativeMethod player_methods[] = {
@@ -136,7 +136,7 @@ static JNINativeMethod player_methods[] = {
 	{"initNative", "()I", (void*) jni_player_init},
 	{"deallocNative", "()V", (void*) jni_player_dealloc},
 
-	{"seekNative", "(J)V", (void*) jni_player_seek},
+	{"seekNative", "(I)V", (void*) jni_player_seek},
 
 	{"pauseNative", "()V", (void*) jni_player_pause},
 	{"resumeNative", "()V", (void*) jni_player_resume},
@@ -147,7 +147,7 @@ static JNINativeMethod player_methods[] = {
 	{"renderFrameStart", "()V", (void*) jni_player_render_frame_start},
 	{"renderFrameStop", "()V", (void*) jni_player_render_frame_stop},
 
-	{"getVideoDurationNative", "()J", (void*) jni_player_get_video_duration},
+	{"getVideoDurationNative", "()I", (void*) jni_player_get_video_duration},
 	{"render", "(Landroid/view/Surface;)V", (void*) jni_player_render},
 };
 

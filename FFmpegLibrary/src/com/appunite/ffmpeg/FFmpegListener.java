@@ -27,7 +27,7 @@ public interface FFmpegListener {
 
 	void onFFStop();
 
-	void onFFUpdateTime(long mCurrentTimeUs, long mVideoDurationUs, boolean isFinished);
+	void onFFUpdateTime(int currentTimeS, int videoDurationS, boolean isFinished);
 
 	void onFFSeeked(NotPlayingException result);
 

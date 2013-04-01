@@ -100,7 +100,7 @@ public class FFmpegPlayer {
 	}
 
 	private static class SeekTask extends
-			AsyncTask<Long, Void, NotPlayingException> {
+			AsyncTask<Integer, Void, NotPlayingException> {
 
 		private final FFmpegPlayer player;
 
@@ -109,9 +109,9 @@ public class FFmpegPlayer {
 		}
 
 		@Override
-		protected NotPlayingException doInBackground(Long... params) {
+		protected NotPlayingException doInBackground(Integer... params) {
 			try {
-				player.seekNative(params[0].longValue());
+				player.seekNative(params[0].intValue());
 			} catch (NotPlayingException e) {
 				return e;
 			}
@@ -204,15 +204,15 @@ public class FFmpegPlayer {
 		@Override
 		public void run() {
 			if (mpegListener != null) {
-				mpegListener.onFFUpdateTime(mCurrentTimeUs,
-					mVideoDurationUs, mIsFinished);
+				mpegListener.onFFUpdateTime(mCurrentTimeS,
+					mVideoDurationS, mIsFinished);
 			}
 		}
 
 	};
 
-	private long mCurrentTimeUs;
-	private long mVideoDurationUs;
+	private int mCurrentTimeS;
+	private int mVideoDurationS;
 	private FFmpegStreamInfo[] mStreamsInfos = null;
 	private boolean mIsFinished = false;
 
@@ -251,9 +251,9 @@ public class FFmpegPlayer {
 
 	native void renderFrameStop();
 
-	private native void seekNative(long positionUs) throws NotPlayingException;
+	private native void seekNative(int position) throws NotPlayingException;
 
-	private native long getVideoDurationNative();
+	private native int getVideoDurationNative();
 	
 	public native void render(Surface surface);
 
@@ -287,8 +287,8 @@ public class FFmpegPlayer {
 		new PauseTask(this).execute();
 	}
 
-	public void seek(long positionUs) {
-		new SeekTask(this).execute(Long.valueOf(positionUs));
+	public void seek(int position) {
+		new SeekTask(this).execute(Integer.valueOf(position));
 	}
 
 	public void resume() {
@@ -305,10 +305,10 @@ public class FFmpegPlayer {
 		return bitmap;
 	}
 
-	private void onUpdateTime(long currentUs, long maxUs, boolean isFinished) {
+	private void onUpdateTime(int currentSec, int maxSec, boolean isFinished) {
 
-		this.mCurrentTimeUs = currentUs;
-		this.mVideoDurationUs = maxUs;
+		this.mCurrentTimeS = currentSec;
+		this.mVideoDurationS = maxSec;
 		this.mIsFinished  = isFinished;
 		activity.runOnUiThread(updateTimeRunnable);
 	}

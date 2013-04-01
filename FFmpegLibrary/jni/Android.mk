@@ -20,7 +20,9 @@ include $(CLEAR_VARS)
 #presets - do not tuch this
 FEATURE_NEON:=
 LIBRARY_PROFILER:=
+LIBRARY_LIBYUV:=
 MODULE_ENCRYPT:=
+MODULE_STAGEFRIGHT:=
 
 #settings
 
@@ -38,9 +40,15 @@ endif
 
 #if armeabi or armeabi-v7a
 ifeq ($(TARGET_ARCH_ABI),$(filter $(TARGET_ARCH_ABI),armeabi armeabi-v7a))
+	# add support for hardware encryption ( we need android source)
+	#MODULE_STAGEFRIGHT:=yes
+	#ANDROID_SOURCE = $(ASRC)
+	#ANDROID_SOURCE_VERSION_CODE = 17
+
 	# add profiler (only arm)
 	#LIBRARY_PROFILER:=yes
 
+	LIBRARY_LIBYUV:=yes
 endif
 
 
@@ -79,11 +87,13 @@ LOCAL_STATIC_LIBRARIES += andprof
 LOCAL_REQUIRED_MODULES += andprof
 endif
 
+ifdef LIBRARY_LIBYUV
 LOCAL_CFLAGS += -DLIBYUV
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/libyuv/include
-LOCAL_CPP_INCLUDES += $(LOCAL_PATH)/libyuv/include
 LOCAL_STATIC_LIBRARIES += libyuv_static
 LOCAL_REQUIRED_MODULES += libyuv_static
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/libyuv/include
+LOCAL_CPP_INCLUDES += $(LOCAL_PATH)/libyuv/include
+endif
 
 ifdef MODULE_ENCRYPT
 LOCAL_CFLAGS += -DMODULE_ENCRYPT
@@ -91,6 +101,20 @@ LOCAL_SRC_FILES += aes-protocol.c
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/tropicssl/include
 LOCAL_STATIC_LIBRARIES += tropicssl
 LOCAL_REQUIRED_MODULES += tropicssl
+endif
+
+ifdef MODULE_STAGEFRIGHT
+LOCAL_SRC_FILES +=  ffstagefright.cpp
+LOCAL_C_INCLUDES += $(ANDROID_SOURCE)/frameworks/native/include
+LOCAL_C_INCLUDES += $(ANDROID_SOURCE)/system/core/include
+LOCAL_C_INCLUDES += $(ANDROID_SOURCE)/frameworks/av/include
+LOCAL_C_INCLUDES += $(ANDROID_SOURCE)/hardware/libhardware/include
+LOCAL_C_INCLUDES += $(ANDROID_SOURCE)/frameworks/native/include/media/openmax
+LOCAL_C_INCLUDES += ${ANDROID_NDK_ROOT}/sources/cxx-stl/stlport/stlport
+LOCAL_C_INCLUDES += ${LOCAL_PATH}/ffmpeg
+LOCAL_CPPFLAGS += -D__STDC_CONSTANT_MACROS -Wno-multichar -fno-rtti -fno-exceptions
+LOCAL_CFLAGS += -DMODULE_STAGEFRIGHT -DSOURCE_VERSION_CODE=$(ANDROID_SOURCE_VERSION_CODE)
+LOCAL_LDLIBS += -L$(ANDROID_SOURCE)/out/target/product/generic/system/lib -lstagefright -lmedia -lutils -lcutils -lbinder
 endif
 
 LOCAL_LDLIBS    += -landroid
@@ -113,11 +137,13 @@ LOCAL_STATIC_LIBRARIES += andprof
 LOCAL_REQUIRED_MODULES += andprof
 endif
 
+ifdef LIBRARY_LIBYUV
 LOCAL_CFLAGS += -DLIBYUV
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/libyuv/include
 LOCAL_CPP_INCLUDES += $(LOCAL_PATH)/libyuv/include
 LOCAL_STATIC_LIBRARIES += libyuv_static
 LOCAL_REQUIRED_MODULES += libyuv_static
+endif
 
 ifdef MODULE_ENCRYPT
 LOCAL_CFLAGS += -DMODULE_ENCRYPT
@@ -125,6 +151,20 @@ LOCAL_SRC_FILES += aes-protocol.c
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/tropicssl/include
 LOCAL_STATIC_LIBRARIES += tropicssl
 LOCAL_REQUIRED_MODULES += tropicssl
+endif
+
+ifdef MODULE_STAGEFRIGHT
+LOCAL_SRC_FILES +=  ffstagefright.cpp
+LOCAL_C_INCLUDES += $(ANDROID_SOURCE)/frameworks/native/include
+LOCAL_C_INCLUDES += $(ANDROID_SOURCE)/system/core/include
+LOCAL_C_INCLUDES += $(ANDROID_SOURCE)/frameworks/av/include
+LOCAL_C_INCLUDES += $(ANDROID_SOURCE)/hardware/libhardware/include
+LOCAL_C_INCLUDES += $(ANDROID_SOURCE)/frameworks/native/include/media/openmax
+LOCAL_C_INCLUDES += ${ANDROID_NDK_ROOT}/sources/cxx-stl/stlport/stlport
+LOCAL_C_INCLUDES += ${LOCAL_PATH}/ffmpeg
+LOCAL_CPPFLAGS += -D__STDC_CONSTANT_MACROS -Wno-multichar -fno-rtti -fno-exceptions
+LOCAL_CFLAGS += -DMODULE_STAGEFRIGHT -DSOURCE_VERSION_CODE=$(ANDROID_SOURCE_VERSION_CODE)
+LOCAL_LDLIBS += -L$(ANDROID_SOURCE)/out/target/product/generic/system/lib -lstagefright -lmedia -lutils -lcutils -lbinder
 endif
 
 LOCAL_LDLIBS    += -landroid
@@ -155,6 +195,10 @@ include $(BUILD_SHARED_LIBRARY)
 #includes
 ifdef MODULE_ENCRYPT
 include $(LOCAL_PATH)/Android-tropicssl.mk
+endif
+
+ifdef LIBRARY_LIBYUV
+#include $(LOCAL_PATH)/libyuv/Android.mk
 endif
 
 ifdef LIBRARY_PROFILER
