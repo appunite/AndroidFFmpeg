@@ -79,7 +79,7 @@
 // 10000 ms = 1s
 #define MIN_SLEEP_TIME_MS 2
 
-#define MEASURE_TIME
+//#define MEASURE_TIME
 
 #ifdef MEASURE_TIME
 struct timespec render_frame_start, render_frame_stop;
@@ -896,7 +896,7 @@ int player_decode_video(struct DecoderData * decoder_data, JNIEnv * env,
 				frame->linesize[1], out_frame->data[0], out_frame->linesize[0],
 				ctx->width, ctx->height);
 	} else {
-		LOGI(1, "Using slow conversion: %d ", ctx->pix_fmt);
+		LOGI(3, "Using slow conversion: %d ", ctx->pix_fmt);
 		struct SwsContext *sws_context = player->sws_context;
 		sws_context = sws_getCachedContext(sws_context, ctx->width, ctx->height,
 				ctx->pix_fmt, ctx->width, ctx->height, out_format,
