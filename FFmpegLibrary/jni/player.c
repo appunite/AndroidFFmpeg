@@ -780,6 +780,10 @@ int player_decode_video(struct DecoderData * decoder_data, JNIEnv * env,
 	AVStream * stream = player->input_streams[stream_no];
 	int interrupt_ret;
 	int to_write;
+	int err = 0;
+	AVFrame *rgb_frame = player->rgb_frame;
+	ANativeWindow_Buffer buffer;
+	ANativeWindow * window;
 
 #ifdef MEASURE_TIME
 	struct timespec timespec1, timespec2, diff;
@@ -814,18 +818,20 @@ int player_decode_video(struct DecoderData * decoder_data, JNIEnv * env,
 #ifdef MEASURE_TIME
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &timespec1);
 #endif // MEASURE_TIME
-	int err = 0;
-	AVFrame *rgb_frame = player->rgb_frame;
-#ifdef MEASURE_TIME
-	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &timespec1);
-#endif // MEASURE_TIME
-	ANativeWindow_Buffer buffer;
-	ANativeWindow * window = player->window;
+
+	pthread_mutex_lock(&player->mutex_queue);
+	window = player->window;
+	if (window == NULL) {
+		pthread_mutex_unlock(&player->mutex_queue);
+		goto skip_frame;
+	}
 	ANativeWindow_setBuffersGeometry(window, ctx->width, ctx->height,
 			WINDOW_FORMAT_RGBA_8888);
 	if (ANativeWindow_lock(window, &buffer, NULL) != 0) {
-		goto fail_lock_bitmap;
+		pthread_mutex_unlock(&player->mutex_queue);
+		goto skip_frame;
 	}
+	pthread_mutex_unlock(&player->mutex_queue);
 
 	int format = buffer.format;
 	if (format < 0) {
@@ -1008,8 +1014,7 @@ int player_decode_video(struct DecoderData * decoder_data, JNIEnv * env,
 #endif // SUBTITLES
 
 	ANativeWindow_unlockAndPost(window);
-
-fail_lock_bitmap:
+skip_frame:
 	return err;
 }
 
