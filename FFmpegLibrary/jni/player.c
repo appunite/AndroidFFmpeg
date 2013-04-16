@@ -890,8 +890,7 @@ int player_decode_video(struct DecoderData * decoder_data, JNIEnv * env,
 				frame->linesize[2], frame->data[1], frame->linesize[1],
 				out_frame->data[0], out_frame->linesize[0], ctx->width,
 				ctx->height);
-	}
-	if (ctx->pix_fmt == PIX_FMT_NV12) {
+	} else if (ctx->pix_fmt == PIX_FMT_NV12) {
 		__NV21ToARGB(frame->data[0], frame->linesize[0], frame->data[1],
 				frame->linesize[1], out_frame->data[0], out_frame->linesize[0],
 				ctx->width, ctx->height);
