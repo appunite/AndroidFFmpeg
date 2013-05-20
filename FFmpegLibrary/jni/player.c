@@ -75,9 +75,9 @@
 #define DO_NOT_SEEK -1
 
 // 1000000 us = 1 s
-#define MIN_SLEEP_TIME_US 10000
-// 10000 ms = 1s
-#define MIN_SLEEP_TIME_MS 2
+#define MIN_SLEEP_TIME_US 1000ll
+
+#define AUDIO_TIME_ADJUST_US -200000ll
 
 //#define MEASURE_TIME
 
@@ -751,7 +751,7 @@ enum WaitFuncRet player_wait_for_frame(struct Player *player, int64_t stream_tim
 			pthread_cond_broadcast(&player->cond_queue);
 		}
 
-		if (sleep_time <= MIN_SLEEP_TIME_MS) {
+		if (sleep_time <= MIN_SLEEP_TIME_US) {
 			// We do not need to wait if time is slower then minimal sleep time
 			break;
 		}
@@ -1459,7 +1459,7 @@ int player_write_audio(struct DecoderData *decoder_data, JNIEnv *env,
 		LOGI(9, "player_write_audio - added")
 	}
 	enum WaitFuncRet wait_ret = player_wait_for_frame(player,
-			player->audio_clock, stream_no);
+			player->audio_clock + AUDIO_TIME_ADJUST_US, stream_no);
 	if (wait_ret == WAIT_FUNC_RET_SKIP) {
 		goto end;
 	}
