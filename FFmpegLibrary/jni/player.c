@@ -190,6 +190,7 @@ struct Player {
 
 	int video_stream_no;
 	int audio_stream_no;
+	int no_audio;
 	AVStream *input_streams[MAX_STREAMS];
 	AVCodecContext * input_codec_ctxs[MAX_STREAMS];
 	int input_stream_numbers[MAX_STREAMS];
@@ -2283,7 +2284,8 @@ void player_stop_without_lock(struct State * state) {
 
 	player_play_prepare_free(player);
 	player_start_decoding_threads_free(player);
-	player_create_audio_track_free(player, state);
+	if (player->no_audio == FALSE)
+		player_create_audio_track_free(player, state);
 #ifdef SUBTITLES
 	player_prepare_subtitles_queue_free(state);
 #endif // SUBTITLES
@@ -2369,8 +2371,9 @@ int player_set_data_source(struct State *state, const char *file_path,
 
 	if ((player->audio_stream_no = player_find_stream(player,
 			AVMEDIA_TYPE_AUDIO, audio_stream_no)) < 0) {
-		err = player->audio_stream_no;
-		goto error;
+		player->no_audio = TRUE;
+	} else {
+		player->no_audio = FALSE;
 	}
 #ifdef SUBTITLES
 	if (subtitle_stream_no == NO_STREAM) {
@@ -2409,7 +2412,7 @@ int player_set_data_source(struct State *state, const char *file_path,
 			goto error;
 	}
 #endif // SUBTITLES
-	if ((err = player_create_audio_track(player, state)) < 0)
+	if (player->no_audio == FALSE && ((err = player_create_audio_track(player, state)) < 0))
 		goto error;
 
 	player_get_video_duration(player);
@@ -2431,7 +2434,8 @@ int player_set_data_source(struct State *state, const char *file_path,
 
 	player_play_prepare_free(player);
 	player_start_decoding_threads_free(player);
-	player_create_audio_track_free(player, state);
+	if (player->no_audio == FALSE)
+		player_create_audio_track_free(player, state);
 #ifdef SUBTITLES
 	player_prepare_subtitles_queue_free(state);
 #endif // SUBTITLES
@@ -2537,9 +2541,11 @@ void jni_player_resume(JNIEnv *env, jobject thiz) {
 
 	pthread_cond_broadcast(&player->cond_queue);
 
-	(*env)->CallVoidMethod(env, player->audio_track,
-			player->audio_track_play_method);
-	// just leave exception
+	if (player->no_audio == FALSE) {
+		(*env)->CallVoidMethod(env, player->audio_track,
+				player->audio_track_play_method);
+		// just leave exception
+	}
 
 do_nothing:
 	pthread_mutex_unlock(&player->mutex_queue);
