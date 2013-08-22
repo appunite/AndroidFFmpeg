@@ -21,7 +21,11 @@ if [ "$NDK" = "" ]; then
 	exit 1
 fi
 
-OS=`uname -s | tr '[A-Z]' '[a-z]'`-`uname -p`
+OS_ARCH=`uname -p`
+if [[ $OS_ARCH -eq "i686" ]]; then
+	OS_ARCH="x86"
+fi
+OS=`uname -s | tr '[A-Z]' '[a-z]'`-$OS_ARCH
 function build_x264
 {
 	PLATFORM=$NDK/platforms/$PLATFORM_VERSION/arch-$ARCH/
