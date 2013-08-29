@@ -22,7 +22,7 @@ if [ "$NDK" = "" ]; then
 fi
 
 OS_ARCH=`uname -p`
-if [[ $OS_ARCH -eq "i686" ]]; then
+if [[ $OS_ARCH == "i686" ]]; then
 	OS_ARCH="x86"
 fi
 OS=`uname -s | tr '[A-Z]' '[a-z]'`-$OS_ARCH
