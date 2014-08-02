@@ -1,15 +1,15 @@
 [submodule "FFmpegLibrary/jni/ffmpeg"]
 	path = FFmpegLibrary/jni/ffmpeg
-	url = git://source.ffmpeg.org/ffmpeg.git
+	url = http://git.videolan.org/git/ffmpeg.git
 [submodule "FFmpegLibrary/jni/vo-aacenc"]
 	path = FFmpegLibrary/jni/vo-aacenc
-	url = git://opencore-amr.git.sourceforge.net/gitroot/opencore-amr/vo-aacenc
+	url = http://git.code.sf.net/p/opencore-amr/vo-aacenc
 [submodule "FFmpegLibrary/jni/vo-amrwbenc"]
 	path = FFmpegLibrary/jni/vo-amrwbenc
-	url = git://opencore-amr.git.sourceforge.net/gitroot/opencore-amr/vo-amrwbenc
+	url = http://git.code.sf.net/p/opencore-amr/vo-amrwbenc
 [submodule "FFmpegLibrary/jni/x264"]
 	path = FFmpegLibrary/jni/x264
-	url = git://git.videolan.org/x264.git
+	url = http://git.videolan.org/git/x264.git
 [submodule "FFmpegLibrary/jni/tropicssl"]
 	path = FFmpegLibrary/jni/tropicssl
 	url = https://review.appunite.com/tropicssl.git
@@ -21,4 +21,4 @@
 	url = https://review.appunite.com/fribidi.git
 [submodule "FFmpegLibrary/jni/freetype2"]
 	path = FFmpegLibrary/jni/freetype2
-	url = git://git.sv.gnu.org/freetype/freetype2.git
+	url = http://git.savannah.gnu.org/r/freetype/freetype2.git
