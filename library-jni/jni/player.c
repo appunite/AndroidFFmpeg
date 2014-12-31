@@ -1792,9 +1792,11 @@ void player_print_video_informations(struct Player *player,
 			AVDictionary *metadaat = stream->metadata;
 			AVDictionaryEntry *tag = NULL;
 			LOGI(3, "-- metadata:")
-			while ((tag = av_dict_get(metadaat, "", tag, AV_DICT_IGNORE_SUFFIX))
-					!= NULL) {
-				LOGI(3, "--- %s = %s", tag->key, tag->value);
+			if (metadaat) {
+				while ((tag = av_dict_get(metadaat, "", tag, AV_DICT_IGNORE_SUFFIX))
+						!= NULL) {
+					LOGI(3, "--- %s = %s", tag->key, tag->value);
+				}
 			}
 			LOGI(3, "-- codec_name: %s", codec->codec_name);
 			char *codec_type = "other";
