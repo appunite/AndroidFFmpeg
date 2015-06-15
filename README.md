@@ -71,40 +71,9 @@ downloading source code
 	cd library-jni
 	cd jni
 
-download libyuv
+download libyuv and configure libs
 
-	# I hate svn too :)
-	svn checkout http://libyuv.googlecode.com/svn/trunk/ libyuv
-
-setup freetype environemtn
-
-	cd freetype2
-	./autogen.sh
-	cd ..
-
-setup fribidi environemtn
-
-	cd fribidi
-	autoreconf -ivf
-	cd ..
-
-setup libass environemtn
-
-	cd libass
-	autoreconf -ivf
-	cd ..
-
-setup vo-aacenc environment
-
-	cd vo-aacenc
-	autoreconf -ivf
-	cd ..
-
-setup vo-amrwbenc environment
-
-	cd vo-amrwbenc
-	autoreconf -ivf
-	cd ..
+	./fetch.sh
 
 build external libraries
 Download r8e ndk: https://dl.google.com/android/ndk/android-ndk-r8e-darwin-x86_64.tar.bz2 or
