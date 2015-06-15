@@ -8,16 +8,6 @@ This project aim to simplify compilation of FFmpeg for android different archite
 
 I'm afraid this project is not prepared for android beginners - build it and using it requires some NDK skills. 
 
-## Moved source code
-I moved project source code to our company review system https://review.appunite.com
-because I am used to benefit from review systems like Gerrit. There you can find newest not yet accepted source code. If you do not care of newest source code or contributing software you can just use github where you can reaches accepted commits.
-
-	git clone https://review.appunite.com/androidffmpeg
-	
-or
-
-	git clone https://github.com/appunite/AndroidFFmpeg.git
-
 ## License
 Copyright (C) 2012 Appunite.com
 Licensed under the Apache License, Verision 2.0
@@ -48,17 +38,6 @@ on Mac - you can use tool brew from homebrew project. You have additionally inst
 **Please read instruciton very carefully**. A lot of people had trouble because they did not read this manual with attention. **If you have some problems or questions do not send me emails**. First: look on past issues on github. Than: try figure out problem with google. If you did not find solution then you can ask on github issue tracker.
 
 ## Installation
-
-### Before start
-if you have a problem with certificate add *GIT\_SSL\_NO\_VERIFY=true* before git submodule update line
-
-	GIT_SSL_NO_VERIFY=true  git submodule update
-
-Im sorry about this certificate issue, but never is enough time to fix problems like those
-
-**If (only if) you have ssh key in appunite review system** you should setup global alias in *~/.gitconfig* file.
-
-	git config --global url.ssh://review.appunite.com.insteadOf https://review.appunite.com
 
 ### Go to the work
 downloading source code 
