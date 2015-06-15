@@ -75,9 +75,9 @@
 #define DO_NOT_SEEK -1
 
 // 1000000 us = 1 s
-#define MIN_SLEEP_TIME_US 10000
-// 10000 ms = 1s
-#define MIN_SLEEP_TIME_MS 2
+#define MIN_SLEEP_TIME_US 1000ll
+
+#define AUDIO_TIME_ADJUST_US -200000ll
 
 //#define MEASURE_TIME
 
@@ -183,6 +183,12 @@ struct Player {
 	jmethodID player_on_update_time_method;
 	jmethodID player_prepare_audio_track_method;
 	jmethodID player_set_stream_info_method;
+
+	pthread_mutex_t mutex_interrupt;
+
+	AVIOInterruptCB interrupt_callback;
+
+	int interrupt;
 
 	pthread_mutex_t mutex_operation;
 
@@ -723,7 +729,8 @@ enum WaitFuncRet player_wait_for_frame(struct Player *player, int64_t stream_tim
 				"player_wait_for_frame[%d = %s] = (%f) - (%f)",
 				stream_no,
 				player->video_stream_no == stream_no ? "Video" : "Audio",
-						stream_time, current_video_time/1000000.0);
+				stream_time/1000000.0,
+				current_video_time/1000000.0);
 
 		int64_t sleep_time = stream_time - current_video_time;
 
@@ -744,7 +751,7 @@ enum WaitFuncRet player_wait_for_frame(struct Player *player, int64_t stream_tim
 			pthread_cond_broadcast(&player->cond_queue);
 		}
 
-		if (sleep_time <= MIN_SLEEP_TIME_MS) {
+		if (sleep_time <= MIN_SLEEP_TIME_US) {
 			// We do not need to wait if time is slower then minimal sleep time
 			break;
 		}
@@ -890,8 +897,7 @@ int player_decode_video(struct DecoderData * decoder_data, JNIEnv * env,
 				frame->linesize[2], frame->data[1], frame->linesize[1],
 				out_frame->data[0], out_frame->linesize[0], ctx->width,
 				ctx->height);
-	}
-	if (ctx->pix_fmt == PIX_FMT_NV12) {
+	} else if (ctx->pix_fmt == PIX_FMT_NV12) {
 		__NV21ToARGB(frame->data[0], frame->linesize[0], frame->data[1],
 				frame->linesize[1], out_frame->data[0], out_frame->linesize[0],
 				ctx->width, ctx->height);
@@ -1453,7 +1459,7 @@ int player_write_audio(struct DecoderData *decoder_data, JNIEnv *env,
 		LOGI(9, "player_write_audio - added")
 	}
 	enum WaitFuncRet wait_ret = player_wait_for_frame(player,
-			player->audio_clock, stream_no);
+			player->audio_clock + AUDIO_TIME_ADJUST_US, stream_no);
 	if (wait_ret == WAIT_FUNC_RET_SKIP) {
 		goto end;
 	}
@@ -2305,9 +2311,38 @@ void player_stop_without_lock(struct State * state) {
 void player_stop(struct State * state) {
 	int ret;
 
-	pthread_mutex_lock(&state->player->mutex_operation);
+	struct Player * player = state->player;
+
+	pthread_mutex_lock(&player->mutex_interrupt);
+	player->interrupt = TRUE;
+	pthread_mutex_unlock(&player->mutex_interrupt);
+
+	pthread_mutex_lock(&player->mutex_operation);
 	player_stop_without_lock(state);
-	pthread_mutex_unlock(&state->player->mutex_operation);
+	pthread_mutex_unlock(&player->mutex_operation);
+}
+
+int player_ctx_interrupt_callback(void *p) {
+	int ret = 0;
+	struct Player *player = (struct Player*) p;
+	pthread_mutex_lock(&player->mutex_interrupt);
+	if (player->interrupt) {
+		// method is interrupt
+		ret = 1;
+	}
+	pthread_mutex_unlock(&player->mutex_interrupt);
+	return ret;
+}
+
+int player_create_interrupt_callback(struct Player *player) {
+	pthread_mutex_lock(&player->mutex_interrupt);
+	player->interrupt = FALSE;
+	pthread_mutex_unlock(&player->mutex_interrupt);
+
+	player->interrupt_callback =
+			(AVIOInterruptCB) {player_ctx_interrupt_callback, player};
+	player->input_format_ctx->interrupt_callback = player->interrupt_callback;
+	return 0;
 }
 
 int player_set_data_source(struct State *state, const char *file_path,
@@ -2347,6 +2382,9 @@ int player_set_data_source(struct State *state, const char *file_path,
 
 	// trying decode video
 	if ((err = player_create_context(player)) < 0)
+		goto error;
+
+	if ((err = player_create_interrupt_callback(player)) < 0)
 		goto error;
 
 	if ((err = player_open_input(player, file_path, dictionary)) < 0)
@@ -2777,6 +2815,7 @@ int jni_player_init(JNIEnv *env, jobject thiz) {
 	}
 
 	pthread_mutex_init(&player->mutex_operation, NULL);
+	pthread_mutex_init(&player->mutex_interrupt, NULL);
 	pthread_mutex_init(&player->mutex_queue, NULL);
 #ifdef SUBTITLES
 	pthread_mutex_init(&player->mutex_ass, NULL);
