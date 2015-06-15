@@ -22,6 +22,7 @@ if [ "$NDK" = "" ]; then
 fi
 
 OS=`uname -s | tr '[A-Z]' '[a-z]'`
+OS_ARCH=`uname -m`
 function build_x264
 {
 	PLATFORM=$NDK/platforms/$PLATFORM_VERSION/arch-$ARCH/
@@ -356,7 +357,7 @@ PREFIX=../ffmpeg-build/armeabi
 OUT_LIBRARY=$PREFIX/libffmpeg.so
 ADDITIONAL_CONFIGURE_FLAG=
 SONAME=libffmpeg.so
-PREBUILT=$NDK/toolchains/arm-linux-androideabi-4.4.3/prebuilt/$OS-x86
+PREBUILT=$NDK/toolchains/arm-linux-androideabi-4.4.3/prebuilt/$OS-$OS_ARCH
 PLATFORM_VERSION=android-5
 build_amr
 build_aac
@@ -374,7 +375,7 @@ PREFIX=../ffmpeg-build/x86
 OUT_LIBRARY=$PREFIX/libffmpeg.so
 ADDITIONAL_CONFIGURE_FLAG=--disable-asm
 SONAME=libffmpeg.so
-PREBUILT=$NDK/toolchains/x86-4.4.3/prebuilt/$OS-x86
+PREBUILT=$NDK/toolchains/x86-4.4.3/prebuilt/$OS-$OS_ARCH
 PLATFORM_VERSION=android-9
 build_amr
 build_aac
@@ -392,7 +393,7 @@ PREFIX=../ffmpeg-build/mips
 OUT_LIBRARY=$PREFIX/libffmpeg.so
 ADDITIONAL_CONFIGURE_FLAG="--disable-mips32r2"
 SONAME=libffmpeg.so
-PREBUILT=$NDK/toolchains/mipsel-linux-android-4.4.3/prebuilt/$OS-x86
+PREBUILT=$NDK/toolchains/mipsel-linux-android-4.4.3/prebuilt/$OS-$OS_ARCH
 PLATFORM_VERSION=android-9
 build_amr
 build_aac
@@ -411,7 +412,7 @@ PREFIX=../ffmpeg-build/armeabi-v7a
 OUT_LIBRARY=$PREFIX/libffmpeg.so
 ADDITIONAL_CONFIGURE_FLAG=
 SONAME=libffmpeg.so
-PREBUILT=$NDK/toolchains/arm-linux-androideabi-4.4.3/prebuilt/$OS-x86
+PREBUILT=$NDK/toolchains/arm-linux-androideabi-4.4.3/prebuilt/$OS-$OS_ARCH
 PLATFORM_VERSION=android-5
 build_amr
 build_aac
@@ -430,7 +431,7 @@ PREFIX=../ffmpeg-build/armeabi-v7a-neon
 OUT_LIBRARY=../ffmpeg-build/armeabi-v7a/libffmpeg-neon.so
 ADDITIONAL_CONFIGURE_FLAG=--enable-neon
 SONAME=libffmpeg-neon.so
-PREBUILT=$NDK/toolchains/arm-linux-androideabi-4.4.3/prebuilt/$OS-x86
+PREBUILT=$NDK/toolchains/arm-linux-androideabi-4.4.3/prebuilt/$OS-$OS_ARCH
 PLATFORM_VERSION=android-9
 build_amr
 build_aac

@@ -1,32 +1,27 @@
-FFmpegLibrary/jni/ffmpeg-build/**
-FFmpegLibrary/bin/**
-FFmpegLibrary/local.properties
-FFmpegLibrary/gen/**
-FFmpegLibrary/tmp/**
-FFmpegLibrary/obj/**
-FFmpegLibrary/libs/**
-FFmpegLibrary/proguard/**
-FFmpegLibrary/.settings/**
-FFmpegLibrary/jni/.settings/**
-FFmpegLibrary/lint.xml
-FFmpegLibrary/jni/libyuv/**
+#Specific
+library-jni/libs/
+library-jni/obj/
+library-jni/jni/ffmpeg-build/
+library-jni/jni/libyuv/
 
-FFmpegExample/bin/**
-FFmpegExample/gen/**
-FFmpegExample/tmp/**
-FFmpegExample/obj/**
-FFmpegExample/local.properties
-FFmpegExample/proguard/**
-FFmpegExample/.settings/**
-FFmpegExample/lint.xml
+#IntelliJ IDEA
+.idea
+*.iml
+*.ipr
+*.iws
+classes
+gen-external-apklibs
 
+#Gradle
+.gradle
+build
+local.properties
 
-.cproject
-.classpath
-.project
+#Other
+.DS_Store
+tmp
+*.swp
 *.tmp
 *.bak
 *.swp
 *.launch
-**/.DS_Store
-.DS_Store
