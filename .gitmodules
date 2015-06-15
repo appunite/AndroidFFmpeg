@@ -1,24 +1,24 @@
-[submodule "FFmpegLibrary/jni/ffmpeg"]
-	path = FFmpegLibrary/jni/ffmpeg
+[submodule "library-jni/jni/ffmpeg"]
+	path = library-jni/jni/ffmpeg
 	url = git://source.ffmpeg.org/ffmpeg.git
-[submodule "FFmpegLibrary/jni/vo-aacenc"]
-	path = FFmpegLibrary/jni/vo-aacenc
+[submodule "library-jni/jni/vo-aacenc"]
+	path = library-jni/jni/vo-aacenc
 	url = git://opencore-amr.git.sourceforge.net/gitroot/opencore-amr/vo-aacenc
-[submodule "FFmpegLibrary/jni/vo-amrwbenc"]
-	path = FFmpegLibrary/jni/vo-amrwbenc
+[submodule "library-jni/jni/vo-amrwbenc"]
+	path = library-jni/jni/vo-amrwbenc
 	url = git://opencore-amr.git.sourceforge.net/gitroot/opencore-amr/vo-amrwbenc
-[submodule "FFmpegLibrary/jni/x264"]
-	path = FFmpegLibrary/jni/x264
+[submodule "library-jni/jni/x264"]
+	path = library-jni/jni/x264
 	url = git://git.videolan.org/x264.git
-[submodule "FFmpegLibrary/jni/tropicssl"]
-	path = FFmpegLibrary/jni/tropicssl
+[submodule "library-jni/jni/tropicssl"]
+	path = library-jni/jni/tropicssl
 	url = https://review.appunite.com/tropicssl.git
-[submodule "FFmpegLibrary/jni/libass"]
-	path = FFmpegLibrary/jni/libass
+[submodule "library-jni/jni/libass"]
+	path = library-jni/jni/libass
 	url = https://code.google.com/p/libass/
-[submodule "FFmpegLibrary/jni/fribidi"]
-	path = FFmpegLibrary/jni/fribidi
+[submodule "library-jni/jni/fribidi"]
+	path = library-jni/jni/fribidi
 	url = https://review.appunite.com/fribidi.git
-[submodule "FFmpegLibrary/jni/freetype2"]
-	path = FFmpegLibrary/jni/freetype2
+[submodule "library-jni/jni/freetype2"]
+	path = library-jni/jni/freetype2
 	url = git://git.sv.gnu.org/freetype/freetype2.git
