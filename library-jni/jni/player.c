@@ -2685,7 +2685,7 @@ int jni_player_init(JNIEnv *env, jobject thiz) {
 #endif
 
 	struct Player *player = malloc(sizeof(struct Player));
-	memset(player, 0, sizeof(player));
+	memset(player, 0, sizeof(*player));
 	player->audio_stream_no = -1;
 	player->video_stream_no = -1;
 #ifdef SUBTITLES
