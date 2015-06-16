@@ -25,11 +25,13 @@ on mac: you have to install xcode and command tools from xcode preferences
 you have to install (on mac you can use brew command from homebrew):
 you have to install:
 - autoconf
+- libtool
+- make
 - autoconf-archive
 - automake
 - pkg-config
 - git
-- svn
+- svn (subversion)
 
 on Debian/Ubuntu - you can use apt-get
 
