@@ -1550,6 +1550,15 @@ int player_open_stream(struct Player *player, AVCodecContext * ctx,
 				codec_id);
 		return -ERROR_COULD_NOT_FIND_VIDEO_CODEC;
 	}
+
+    //enable multi-thread decode video, 
+    //the thread_count should be match with the cpu cores,
+    //you can get this form java or use cpufeature lib
+    //here I am fixed it with 4.
+    if (ctx->codec_type == AVMEDIA_TYPE_VIDEO) {
+        ctx->thread_count = 4;
+    }
+
 	if (avcodec_open2(ctx, *codec, NULL) < 0) {
 		LOGE(1, "Could not open codec");
 		player_print_codec_description(*codec);
