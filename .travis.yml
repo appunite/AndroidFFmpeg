@@ -31,5 +31,6 @@ install:
   - sh -c 'cd library-jni/jni && ./build_android.sh'
   - sh -c 'cd library-jni/jni && ndk-build'
   - rm -rf $NDK
+  - rm -rf library-jni/jni
   - TERM=dumb ./gradlew build
 
