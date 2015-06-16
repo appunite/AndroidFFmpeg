@@ -2299,8 +2299,9 @@ void player_stop_without_lock(struct State * state) {
 
 	player_play_prepare_free(player);
 	player_start_decoding_threads_free(player);
-	if (player->no_audio == FALSE)
+	if (player->no_audio == FALSE) {
 		player_create_audio_track_free(player, state);
+	}
 #ifdef SUBTITLES
 	player_prepare_subtitles_queue_free(state);
 #endif // SUBTITLES
