@@ -1,5 +1,9 @@
 language: android
 jdk: oraclejdk7
+
+cache:
+  directories:
+  - $HOME/.gradle/caches
  
 android:
   components:
