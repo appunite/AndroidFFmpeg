@@ -14,6 +14,7 @@ import android.view.Menu;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.EditText;
 import android.widget.ListView;
 
 import com.ffmpegtest.adapter.ItemsAdapter;
@@ -28,12 +29,34 @@ public class MainActivity extends Activity implements OnItemClickListener {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.main_activity);
 
+		final ListView listView = (ListView) findViewById(R.id.main_activity_list);
+		final EditText editText = (EditText) findViewById(R.id.main_activity_video_url);
+		final View button = findViewById(R.id.main_activity_play_button);
+
+		final UserPreferences userPreferences = new UserPreferences(this);
+		if (savedInstanceState == null) {
+			editText.setText(userPreferences.getUrl());
+		}
 		adapter = new ItemsAdapter(LayoutInflater.from(this));
 		adapter.swapItems(getVideoItems());
 
-		ListView listView = (ListView) findViewById(android.R.id.list);
 		listView.setAdapter(adapter);
 		listView.setOnItemClickListener(this);
+
+		button.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				final String url = String.valueOf(editText.getText());
+				playVideo(url);
+				userPreferences.setUrl(url);
+			}
+		});
+	}
+
+	private void playVideo(String url) {
+		final Intent intent = new Intent(AppConstants.VIDEO_PLAY_ACTION)
+                .putExtra(AppConstants.VIDEO_PLAY_ACTION_EXTRA_URL, url);
+		startActivity(intent);
 	}
 
 	@NonNull
