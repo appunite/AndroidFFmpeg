@@ -8,6 +8,8 @@ This project aim to simplify compilation of FFmpeg for android different archite
 
 I'm afraid this project is not prepared for android beginners - build it and using it requires some NDK skills. 
 
+[![Build Status](https://travis-ci.org/appunite/AndroidFFmpeg.svg)](https://travis-ci.org/appunite/AndroidFFmpeg)
+
 ## License
 Copyright (C) 2012 Appunite.com
 Licensed under the Apache License, Verision 2.0
