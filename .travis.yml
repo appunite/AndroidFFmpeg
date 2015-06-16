@@ -25,5 +25,5 @@ install:
   - sh -c 'cd library-jni/jni/ && ./fetch.sh'
   - sh -c 'cd library-jni/jni && ./build_android.sh'
   - sh -c 'cd library-jni/jni && ndk-build'
-  - TERM=dumb ./gradlew assemble
+  - TERM=dumb ./gradlew build
 
