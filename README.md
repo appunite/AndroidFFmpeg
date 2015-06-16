@@ -8,6 +8,8 @@ This project aim to simplify compilation of FFmpeg for android different archite
 
 I'm afraid this project is not prepared for android beginners - build it and using it requires some NDK skills. 
 
+[![Build Status](https://travis-ci.org/appunite/AndroidFFmpeg.svg)](https://travis-ci.org/appunite/AndroidFFmpeg)
+
 ## License
 Copyright (C) 2012 Appunite.com
 Licensed under the Apache License, Verision 2.0
@@ -23,11 +25,13 @@ on mac: you have to install xcode and command tools from xcode preferences
 you have to install (on mac you can use brew command from homebrew):
 you have to install:
 - autoconf
+- libtool
+- make
 - autoconf-archive
 - automake
 - pkg-config
 - git
-- svn
+- svn (subversion)
 
 on Debian/Ubuntu - you can use apt-get
 
