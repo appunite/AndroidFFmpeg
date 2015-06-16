@@ -2,6 +2,8 @@ apply plugin: 'com.android.application'
 
 dependencies {
     compile 'com.android.support:support-v4:22.1.1'
+    compile "javax.annotation:javax.annotation-api:1.2"
+    compile "com.google.code.findbugs:jsr305:2.0.1"
 
     compile(project(":library"))
 }
