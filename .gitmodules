@@ -12,7 +12,7 @@
 	url = git://git.videolan.org/x264.git
 [submodule "library-jni/jni/tropicssl"]
 	path = library-jni/jni/tropicssl
-	url = https://review.appunite.com/tropicssl.git
+	url = https://gitorious.org/tropicssl/tropicssl.git
 [submodule "library-jni/jni/libass"]
 	path = library-jni/jni/libass
 	url = https://github.com/libass/libass.git
