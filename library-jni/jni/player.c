@@ -1796,7 +1796,8 @@ void player_print_video_informations(struct Player *player,
 					!= NULL) {
 				LOGI(3, "--- %s = %s", tag->key, tag->value);
 			}
-			LOGI(3, "-- codec_name: %s", codec->codec_name);
+			const AVCodecDescriptor *codesc = avcodec_descriptor_get(codec->codec_id);
+			LOGI(3, "-- codec_name: %s", codesc ? codesc->long_name : "");
 			char *codec_type = "other";
 			if (codec->codec_type == AVMEDIA_TYPE_AUDIO) {
 				codec_type = "audio";
