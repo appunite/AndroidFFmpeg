@@ -1792,9 +1792,11 @@ void player_print_video_informations(struct Player *player,
 			AVDictionary *metadaat = stream->metadata;
 			AVDictionaryEntry *tag = NULL;
 			LOGI(3, "-- metadata:")
-			while ((tag = av_dict_get(metadaat, "", tag, AV_DICT_IGNORE_SUFFIX))
-					!= NULL) {
-				LOGI(3, "--- %s = %s", tag->key, tag->value);
+			if (metadaat) {
+				while ((tag = av_dict_get(metadaat, "", tag, AV_DICT_IGNORE_SUFFIX))
+						!= NULL) {
+					LOGI(3, "--- %s = %s", tag->key, tag->value);
+				}
 			}
 			const AVCodecDescriptor *codesc = avcodec_descriptor_get(codec->codec_id);
 			LOGI(3, "-- codec_name: %s", codesc ? codesc->long_name : "");
