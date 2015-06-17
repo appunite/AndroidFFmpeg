@@ -18,7 +18,7 @@
 	url = https://code.google.com/p/libass/
 [submodule "library-jni/jni/fribidi"]
 	path = library-jni/jni/fribidi
-	url = https://review.appunite.com/fribidi.git
+	url = https://github.com/appunite/fribidi.git
 [submodule "library-jni/jni/freetype2"]
 	path = library-jni/jni/freetype2
 	url = git://git.sv.gnu.org/freetype/freetype2.git
