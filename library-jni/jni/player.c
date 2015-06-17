@@ -2177,12 +2177,15 @@ void player_play_prepare(struct Player *player) {
 void player_prepare_ass_decoder_free(struct Player *player) {
 	if (player->ass_track != NULL) {
 		ass_free_track(player->ass_track);
+		player->ass_track = NULL;
 	}
 	if (player->ass_renderer != NULL) {
 		ass_renderer_done(player->ass_renderer);
+		player->ass_renderer = NULL;
 	}
 	if (player->ass_library != NULL) {
 		ass_library_done(player->ass_library);
+		player->ass_library = NULL;
 	}
 }
 
