@@ -2,7 +2,6 @@
 library-jni/libs/
 library-jni/obj/
 library-jni/jni/ffmpeg-build/
-library-jni/jni/libyuv/
 
 #IntelliJ IDEA
 .idea
