@@ -31,7 +31,6 @@ you have to install:
 - automake
 - pkg-config
 - git
-- svn (subversion)
 
 on Debian/Ubuntu - you can use apt-get
 
