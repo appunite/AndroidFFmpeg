@@ -15,7 +15,7 @@
 	url = https://review.appunite.com/tropicssl.git
 [submodule "library-jni/jni/libass"]
 	path = library-jni/jni/libass
-	url = https://code.google.com/p/libass/
+	url = https://github.com/libass/libass.git
 [submodule "library-jni/jni/fribidi"]
 	path = library-jni/jni/fribidi
 	url = https://review.appunite.com/fribidi.git
