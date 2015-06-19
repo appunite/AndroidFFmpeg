@@ -33,6 +33,7 @@ public class ItemsAdapter extends BaseAdapter {
         public ViewHolder(@Nonnull LayoutInflater inflater, @Nonnull ViewGroup parent) {
             view = inflater.inflate(R.layout.main_list_item, parent, false);
             textView = (TextView) view.findViewById(R.id.main_list_item_text);
+            view.setTag(this);
         }
 
         @Nonnull
