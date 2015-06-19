@@ -1387,11 +1387,13 @@ void * player_read_from_stream(void *data) {
 
 		// request stream to flush
 		player_assign_to_no_boolean_array(player, player->flush_streams, TRUE);
-		LOGI(3, "player_read_from_stream flushing audio")
-		// flush audio buffer
-		(*env)->CallVoidMethod(env, player->audio_track,
-				player->audio_track_flush_method);
-		LOGI(3, "player_read_from_stream flushed audio");
+		if (player->audio_track != NULL) {
+			LOGI(3, "player_read_from_stream flushing audio")
+			// flush audio buffer
+			(*env)->CallVoidMethod(env, player->audio_track,
+					player->audio_track_flush_method);
+			LOGI(3, "player_read_from_stream flushed audio");
+		}
 		pthread_cond_broadcast(&player->cond_queue);
 
 		LOGI(3, "player_read_from_stream waiting for flush");
@@ -2468,8 +2470,11 @@ int player_set_data_source(struct State *state, const char *file_path,
 			goto error;
 	}
 #endif // SUBTITLES
-	if (player->no_audio == FALSE && ((err = player_create_audio_track(player, state)) < 0))
-		goto error;
+	if (player->no_audio == FALSE) {
+		if ((err = player_create_audio_track(player, state)) < 0) {
+			goto error;
+		}
+	}
 
 	player_get_video_duration(player);
 	player_update_time(state, FALSE);
@@ -2490,8 +2495,9 @@ int player_set_data_source(struct State *state, const char *file_path,
 
 	player_play_prepare_free(player);
 	player_start_decoding_threads_free(player);
-	if (player->no_audio == FALSE)
+	if (player->no_audio == FALSE) {
 		player_create_audio_track_free(player, state);
+	}
 #ifdef SUBTITLES
 	player_prepare_subtitles_queue_free(state);
 #endif // SUBTITLES
@@ -2562,9 +2568,11 @@ void jni_player_pause(JNIEnv *env, jobject thiz) {
 	player->pause_time = av_gettime();
 	pthread_cond_broadcast(&player->cond_queue);
 
-	(*env)->CallVoidMethod(env, player->audio_track,
-			player->audio_track_pause_method);
-	// just leave exception
+	if (player->audio_track != NULL) {
+		(*env)->CallVoidMethod(env, player->audio_track,
+				player->audio_track_pause_method);
+		// just leave exception
+	}
 
 do_nothing:
 	pthread_mutex_unlock(&player->mutex_queue);
