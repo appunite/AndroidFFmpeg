@@ -60,6 +60,7 @@ download libyuv and configure libs
 build external libraries
 Download r8e ndk: https://dl.google.com/android/ndk/android-ndk-r8e-darwin-x86_64.tar.bz2 or
 ttps://dl.google.com/android/ndk/android-ndk-r8e-linux-x86_64.tar.bz2
+Now it should also support r10e
 
 	export NDK=/your/path/to/android-ndk
 	./build_android.sh
