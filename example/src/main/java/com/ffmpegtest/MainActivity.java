@@ -80,7 +80,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
 		items.add(new VideoItem(
 				items.size(),
 				"IP camera",
-				"rtsp://ip.inter.appunite.net:554",
+				"rtsp://ip.appunite-local.net:554",
 				null));
 		return items;
 	}

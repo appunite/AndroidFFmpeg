@@ -22,6 +22,6 @@ public class UserPreferences {
 
     @Nullable
     public String getUrl() {
-        return preferences.getString(KEY_URL, "rtsp://ip.inter.appunite.net:554");
+        return preferences.getString(KEY_URL, "rtsp://ip.appunite-local.net:554");
     }
 }
