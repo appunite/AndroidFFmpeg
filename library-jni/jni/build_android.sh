@@ -65,6 +65,7 @@ function setup_paths
 	export CXX="${CROSS_COMPILE}g++ --sysroot=$PLATFORM"
 	export AS="${CROSS_COMPILE}gcc --sysroot=$PLATFORM"
 	export CC="${CROSS_COMPILE}gcc --sysroot=$PLATFORM"
+	export PKG_CONFIG="${CROSS_COMPILE}pkg-config"
 	export LD="${CROSS_COMPILE}ld"
 	export NM="${CROSS_COMPILE}nm"
 	export STRIP="${CROSS_COMPILE}strip"
