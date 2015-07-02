@@ -2,7 +2,7 @@ language: android
 jdk: oraclejdk7
 
 env:
-  logbal:
+  global:
     - NDK_VERSION=r10e
 
 cache:
