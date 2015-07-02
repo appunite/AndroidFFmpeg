@@ -404,4 +404,4 @@ build_ffmpeg
 build_one
 
 
-echo "BUILD SUCESS"
+echo "BUILD SUCCESS"
