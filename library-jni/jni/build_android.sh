@@ -319,6 +319,7 @@ EOF
 	    --extra-ldflags="-Wl,-rpath-link=$PLATFORM/usr/lib -L$PLATFORM/usr/lib  -nostdlib -lc -lm -ldl -llog -L$PREFIX/lib" \
 	    --extra-cflags="-I$PREFIX/include" \
 	    --disable-everything \
+	    --enable-pthreads \
 	    --enable-libass \
 	    --enable-libvo-aacenc \
 	    --enable-libvo-amrwbenc \
