@@ -33,7 +33,7 @@ before_install:
   - sudo apt-get update
   - sudo apt-get install -qq --force-yes libgd2-xpm ia32-libs ia32-libs-multiarch yasm
   # Android NDK
-  - if [ `uname -m` = x86_64]; then wget http://dl.google.com/android/ndk/android-ndk-$NDK_VERSION-linux-x86_64.bin -O ndk.bin; else wget http://dl.google.com/android/ndk/android-ndk-$NDK_VERSION-linux-x86.bin -O ndk.bin; fi
+  - if [ `uname -m` = x86_64 ]; then wget http://dl.google.com/android/ndk/android-ndk-$NDK_VERSION-linux-x86_64.bin -O ndk.bin; else wget http://dl.google.com/android/ndk/android-ndk-$NDK_VERSION-linux-x86.bin -O ndk.bin; fi
   - chmod a+x ndk.bin
   - ./ndk.bin | egrep -v ^Extracting
   - rm ndk.bin
