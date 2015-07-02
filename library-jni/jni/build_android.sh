@@ -48,18 +48,17 @@ OS_ARCH=`basename $NDK/toolchains/arm-linux-androideabi-$COMPILATOR_VERSION/preb
 echo "Using architecture: $OS_ARCH"
 
 
-function build_x264
+function setup_paths
 {
-	PLATFORM=$NDK/platforms/$PLATFORM_VERSION/arch-$ARCH/
+	export PLATFORM=$NDK/platforms/$PLATFORM_VERSION/arch-$ARCH/
 	if [ ! -d $PLATFORM ]; then
 		echo $PLATFORM does not exist
 		exit 1
 	fi
 	echo "Using platform: $PLATFORM"
 	export PATH=${PATH}:$PREBUILT/bin/
-	CROSS_COMPILE=$PREBUILT/bin/$EABIARCH-
-	CFLAGS=$OPTIMIZE_CFLAGS
-#CFLAGS=" -I$ARM_INC -fpic -DANDROID -fpic -mthumb-interwork -ffunction-sections -funwind-tables -fstack-protector -fno-short-enums -D__ARM_ARCH_5__ -D__ARM_ARCH_5T__ -D__ARM_ARCH_5E__ -D__ARM_ARCH_5TE__  -Wno-psabi -march=armv5te -mtune=xscale -msoft-float -mthumb -Os -fomit-frame-pointer -fno-strict-aliasing -finline-limit=64 -DANDROID  -Wa,--noexecstack -MMD -MP "
+	export CROSS_COMPILE=$PREBUILT/bin/$EABIARCH-
+	export CFLAGS=$OPTIMIZE_CFLAGS
 	export CPPFLAGS="$CFLAGS"
 	export CFLAGS="$CFLAGS"
 	export CXXFLAGS="$CFLAGS"
@@ -67,11 +66,22 @@ function build_x264
 	export AS="${CROSS_COMPILE}gcc --sysroot=$PLATFORM"
 	export CC="${CROSS_COMPILE}gcc --sysroot=$PLATFORM"
 	export NM="${CROSS_COMPILE}nm"
+	export LD="${CROSS_COMPILE}ld"
 	export STRIP="${CROSS_COMPILE}strip"
 	export RANLIB="${CROSS_COMPILE}ranlib"
 	export AR="${CROSS_COMPILE}ar"
 	export LDFLAGS="-Wl,-rpath-link=$PLATFORM/usr/lib -L$PLATFORM/usr/lib -nostdlib -lc -lm -ldl -llog"
+	export PKG_CONFIG_LIBDIR=$(pwd)/$PREFIX/lib/pkgconfig/
+	export PKG_CONFIG_PATH=$(pwd)/$PREFIX/lib/pkgconfig/
 
+	if [ ! -f $CC ]; then
+		print "Gcc does not exists in path: $CC"
+		exit 1;
+	fi
+}
+
+function build_x264
+{
 	cd x264
 	./configure --prefix=$(pwd)/$PREFIX --host=$ARCH-linux --enable-static $ADDITIONAL_CONFIGURE_FLAG || exit 1
 
@@ -82,27 +92,6 @@ function build_x264
 
 function build_amr
 {
-	PLATFORM=$NDK/platforms/$PLATFORM_VERSION/arch-$ARCH/
-	if [ ! -d $PLATFORM ]; then
-		echo $PLATFORM does not exist
-		exit 1
-	fi
-	echo "Using platform: $PLATFORM"
-	export PATH=${PATH}:$PREBUILT/bin/
-	CROSS_COMPILE=$PREBUILT/bin/$EABIARCH-
-	CFLAGS=$OPTIMIZE_CFLAGS
-#CFLAGS=" -I$ARM_INC -fpic -DANDROID -fpic -mthumb-interwork -ffunction-sections -funwind-tables -fstack-protector -fno-short-enums -D__ARM_ARCH_5__ -D__ARM_ARCH_5T__ -D__ARM_ARCH_5E__ -D__ARM_ARCH_5TE__  -Wno-psabi -march=armv5te -mtune=xscale -msoft-float -mthumb -Os -fomit-frame-pointer -fno-strict-aliasing -finline-limit=64 -DANDROID  -Wa,--noexecstack -MMD -MP "
-	export CPPFLAGS="$CFLAGS"
-	export CFLAGS="$CFLAGS"
-	export CXXFLAGS="$CFLAGS"
-	export CXX="${CROSS_COMPILE}g++ --sysroot=$PLATFORM"
-	export CC="${CROSS_COMPILE}gcc --sysroot=$PLATFORM"
-	export NM="${CROSS_COMPILE}nm"
-	export STRIP="${CROSS_COMPILE}strip"
-	export RANLIB="${CROSS_COMPILE}ranlib"
-	export AR="${CROSS_COMPILE}ar"
-	export LDFLAGS="-Wl,-rpath-link=$PLATFORM/usr/lib -L$PLATFORM/usr/lib -nostdlib -lc -lm -ldl -llog"
-
 	cd vo-amrwbenc
 	./configure \
 	    --prefix=$(pwd)/$PREFIX \
@@ -121,27 +110,6 @@ function build_amr
 
 function build_aac
 {
-	PLATFORM=$NDK/platforms/$PLATFORM_VERSION/arch-$ARCH/
-	if [ ! -d $PLATFORM ]; then
-		echo $PLATFORM does not exist
-		exit 1
-	fi
-	echo "Using platform: $PLATFORM"
-	export PATH=${PATH}:$PREBUILT/bin/
-	CROSS_COMPILE=$PREBUILT/bin/$EABIARCH-
-	CFLAGS=$OPTIMIZE_CFLAGS
-#CFLAGS=" -I$ARM_INC -fpic -DANDROID -fpic -mthumb-interwork -ffunction-sections -funwind-tables -fstack-protector -fno-short-enums -D__ARM_ARCH_5__ -D__ARM_ARCH_5T__ -D__ARM_ARCH_5E__ -D__ARM_ARCH_5TE__  -Wno-psabi -march=armv5te -mtune=xscale -msoft-float -mthumb -Os -fomit-frame-pointer -fno-strict-aliasing -finline-limit=64 -DANDROID  -Wa,--noexecstack -MMD -MP "
-	export CPPFLAGS="$CFLAGS"
-	export CFLAGS="$CFLAGS"
-	export CXXFLAGS="$CFLAGS"
-	export CXX="${CROSS_COMPILE}g++ --sysroot=$PLATFORM"
-	export CC="${CROSS_COMPILE}gcc --sysroot=$PLATFORM"
-	export NM="${CROSS_COMPILE}nm"
-	export STRIP="${CROSS_COMPILE}strip"
-	export RANLIB="${CROSS_COMPILE}ranlib"
-	export AR="${CROSS_COMPILE}ar"
-	export LDFLAGS="-Wl,-rpath-link=$PLATFORM/usr/lib -L$PLATFORM/usr/lib -nostdlib -lc -lm -ldl -llog"
-
 	cd vo-aacenc
 	export PKG_CONFIG_LIBDIR=$(pwd)/$PREFIX/lib/pkgconfig/
 	export PKG_CONFIG_PATH=$(pwd)/$PREFIX/lib/pkgconfig/
@@ -161,30 +129,7 @@ function build_aac
 }
 function build_freetype2
 {
-	PLATFORM=$NDK/platforms/$PLATFORM_VERSION/arch-$ARCH/
-	if [ ! -d $PLATFORM ]; then
-		echo $PLATFORM does not exist
-		exit 1
-	fi
-	echo "Using platform: $PLATFORM"
-	export PATH=${PATH}:$PREBUILT/bin/
-	CROSS_COMPILE=$PREBUILT/bin/$EABIARCH-
-	CFLAGS=$OPTIMIZE_CFLAGS
-#CFLAGS=" -I$ARM_INC -fpic -DANDROID -fpic -mthumb-interwork -ffunction-sections -funwind-tables -fstack-protector -fno-short-enums -D__ARM_ARCH_5__ -D__ARM_ARCH_5T__ -D__ARM_ARCH_5E__ -D__ARM_ARCH_5TE__  -Wno-psabi -march=armv5te -mtune=xscale -msoft-float -mthumb -Os -fomit-frame-pointer -fno-strict-aliasing -finline-limit=64 -DANDROID  -Wa,--noexecstack -MMD -MP "
-	export CPPFLAGS="$CFLAGS"
-	export CFLAGS="$CFLAGS"
-	export CXXFLAGS="$CFLAGS"
-	export CXX="${CROSS_COMPILE}g++ --sysroot=$PLATFORM"
-	export CC="${CROSS_COMPILE}gcc --sysroot=$PLATFORM"
-	export NM="${CROSS_COMPILE}nm"
-	export STRIP="${CROSS_COMPILE}strip"
-	export RANLIB="${CROSS_COMPILE}ranlib"
-	export AR="${CROSS_COMPILE}ar"
-	export LDFLAGS="-Wl,-rpath-link=$PLATFORM/usr/lib -L$PLATFORM/usr/lib  -nostdlib -lc -lm -ldl -llog"
-
 	cd freetype2
-	export PKG_CONFIG_LIBDIR=$(pwd)/$PREFIX/lib/pkgconfig/
-	export PKG_CONFIG_PATH=$(pwd)/$PREFIX/lib/pkgconfig/
 	./configure \
 	    --prefix=$(pwd)/$PREFIX \
 	    --host=$ARCH-linux \
@@ -201,30 +146,7 @@ function build_freetype2
 }
 function build_ass
 {
-	PLATFORM=$NDK/platforms/$PLATFORM_VERSION/arch-$ARCH/
-	if [ ! -d $PLATFORM ]; then
-		echo $PLATFORM does not exist
-		exit 1
-	fi
-	echo "Using platform: $PLATFORM"
-	export PATH=${PATH}:$PREBUILT/bin/
-	CROSS_COMPILE=$PREBUILT/bin/$EABIARCH-
-	CFLAGS="$OPTIMIZE_CFLAGS"
-#CFLAGS=" -I$ARM_INC -fpic -DANDROID -fpic -mthumb-interwork -ffunction-sections -funwind-tables -fstack-protector -fno-short-enums -D__ARM_ARCH_5__ -D__ARM_ARCH_5T__ -D__ARM_ARCH_5E__ -D__ARM_ARCH_5TE__  -Wno-psabi -march=armv5te -mtune=xscale -msoft-float -mthumb -Os -fomit-frame-pointer -fno-strict-aliasing -finline-limit=64 -DANDROID  -Wa,--noexecstack -MMD -MP "
-	export CPPFLAGS="$CFLAGS"
-	export CFLAGS="$CFLAGS"
-	export CXXFLAGS="$CFLAGS"
-	export CXX="${CROSS_COMPILE}g++ --sysroot=$PLATFORM"
-	export CC="${CROSS_COMPILE}gcc --sysroot=$PLATFORM"
-	export NM="${CROSS_COMPILE}nm"
-	export STRIP="${CROSS_COMPILE}strip"
-	export RANLIB="${CROSS_COMPILE}ranlib"
-	export AR="${CROSS_COMPILE}ar"
-	export LDFLAGS="-Wl,-rpath-link=$PLATFORM/usr/lib -L$PLATFORM/usr/lib  -nostdlib -lc -lm -ldl -llog"
-
 	cd libass
-	export PKG_CONFIG_LIBDIR=$(pwd)/$PREFIX/lib/pkgconfig/
-	export PKG_CONFIG_PATH=$(pwd)/$PREFIX/lib/pkgconfig/
 	./configure \
 	    --prefix=$(pwd)/$PREFIX \
 	    --host=$ARCH-linux \
@@ -242,27 +164,6 @@ function build_ass
 }
 function build_fribidi
 {
-	PLATFORM=$NDK/platforms/$PLATFORM_VERSION/arch-$ARCH/
-	if [ ! -d $PLATFORM ]; then
-		echo $PLATFORM does not exist
-		exit 1
-	fi
-	echo "Using platform: $PLATFORM"
-	export PATH=${PATH}:$PREBUILT/bin/
-	CROSS_COMPILE=$PREBUILT/bin/$EABIARCH-
-	CFLAGS="$OPTIMIZE_CFLAGS -std=gnu99"
-#CFLAGS=" -I$ARM_INC -fpic -DANDROID -fpic -mthumb-interwork -ffunction-sections -funwind-tables -fstack-protector -fno-short-enums -D__ARM_ARCH_5__ -D__ARM_ARCH_5T__ -D__ARM_ARCH_5E__ -D__ARM_ARCH_5TE__  -Wno-psabi -march=armv5te -mtune=xscale -msoft-float -mthumb -Os -fomit-frame-pointer -fno-strict-aliasing -finline-limit=64 -DANDROID  -Wa,--noexecstack -MMD -MP "
-	export CPPFLAGS="$CFLAGS"
-	export CFLAGS="$CFLAGS"
-	export CXXFLAGS="$CFLAGS"
-	export CXX="${CROSS_COMPILE}g++ --sysroot=$PLATFORM"
-	export CC="${CROSS_COMPILE}gcc --sysroot=$PLATFORM"
-	export NM="${CROSS_COMPILE}nm"
-	export STRIP="${CROSS_COMPILE}strip"
-	export RANLIB="${CROSS_COMPILE}ranlib"
-	export AR="${CROSS_COMPILE}ar"
-	export LDFLAGS="-Wl,-rpath-link=$PLATFORM/usr/lib -L$PLATFORM/usr/lib -nostdlib -lc -lm -ldl -llog"
-
 	cd fribidi
 	./configure \
 	    --prefix=$(pwd)/$PREFIX \
@@ -281,28 +182,7 @@ function build_fribidi
 }
 function build_ffmpeg
 {
-	PLATFORM=$NDK/platforms/$PLATFORM_VERSION/arch-$ARCH/
-	if [ ! -d $PLATFORM ]; then
-		echo $PLATFORM does not exist
-		exit 1
-	fi
-	echo "Using platform: $PLATFORM"
-	export PATH=${PATH}:$PREBUILT/bin/
-	CC=$PREBUILT/bin/$EABIARCH-gcc
-	CROSS_PREFIX=$PREBUILT/bin/$EABIARCH-
-	PKG_CONFIG=${CROSS_PREFIX}pkg-config
-	if [ ! -f $PKG_CONFIG ];
-	then
-		cat > $PKG_CONFIG << EOF
-#!/bin/bash
-pkg-config \$*
-EOF
-		chmod u+x $PKG_CONFIG
-	fi
-	NM=$PREBUILT/bin/$EABIARCH-nm
 	cd ffmpeg
-	export PKG_CONFIG_LIBDIR=$(pwd)/$PREFIX/lib/pkgconfig/
-	export PKG_CONFIG_PATH=$(pwd)/$PREFIX/lib/pkgconfig/
 	./configure --target-os=linux \
 	    --prefix=$PREFIX \
 	    --enable-cross-compile \
@@ -404,15 +284,8 @@ EOF
 }
 
 function build_one {
-	PLATFORM=$NDK/platforms/$PLATFORM_VERSION/arch-$ARCH/
-	if [ ! -d $PLATFORM ]; then
-		echo $PLATFORM does not exist
-		exit 1
-	fi
-	echo "Using platform: $PLATFORM"
-	export PATH=${PATH}:$PREBUILT/bin/
 	cd ffmpeg
-	$PREBUILT/bin/$EABIARCH-ld -rpath-link=$PLATFORM/usr/lib -L$PLATFORM/usr/lib -L$PREFIX/lib  -soname $SONAME -shared -nostdlib -Bsymbolic --whole-archive --no-undefined -o $OUT_LIBRARY -lavcodec -lavformat -lavresample -lavutil -lswresample -lass -lfreetype -lfribidi -lswscale -lvo-aacenc -lvo-amrwbenc -lc -lm -lz -ldl -llog --dynamic-linker=/system/bin/linker -zmuldefs $PREBUILT/lib/gcc/$EABIARCH/$COMPILATOR_VERSION/libgcc.a || exit 1
+	$LD -rpath-link=$PLATFORM/usr/lib -L$PLATFORM/usr/lib -L$PREFIX/lib  -soname $SONAME -shared -nostdlib -Bsymbolic --whole-archive --no-undefined -o $OUT_LIBRARY -lavcodec -lavformat -lavresample -lavutil -lswresample -lass -lfreetype -lfribidi -lswscale -lvo-aacenc -lvo-amrwbenc -lc -lm -lz -ldl -llog --dynamic-linker=/system/bin/linker -zmuldefs $PREBUILT/lib/gcc/$EABIARCH/$COMPILATOR_VERSION/libgcc.a || exit 1
 	cd ..
 }
 
@@ -427,6 +300,7 @@ ADDITIONAL_CONFIGURE_FLAG=
 SONAME=libffmpeg.so
 PREBUILT=$NDK/toolchains/arm-linux-androideabi-$COMPILATOR_VERSION/prebuilt/$OS_ARCH
 PLATFORM_VERSION=android-5
+setup_paths
 build_amr
 build_aac
 build_fribidi
@@ -445,6 +319,7 @@ ADDITIONAL_CONFIGURE_FLAG=--disable-asm
 SONAME=libffmpeg.so
 PREBUILT=$NDK/toolchains/x86-$COMPILATOR_VERSION/prebuilt/$OS_ARCH
 PLATFORM_VERSION=android-9
+setup_paths
 build_amr
 build_aac
 build_fribidi
@@ -463,6 +338,7 @@ ADDITIONAL_CONFIGURE_FLAG="--disable-mips32r2"
 SONAME=libffmpeg.so
 PREBUILT=$NDK/toolchains/mipsel-linux-android-$COMPILATOR_VERSION/prebuilt/$OS_ARCH
 PLATFORM_VERSION=android-9
+setup_paths
 build_amr
 build_aac
 build_fribidi
@@ -482,6 +358,7 @@ ADDITIONAL_CONFIGURE_FLAG=
 SONAME=libffmpeg.so
 PREBUILT=$NDK/toolchains/arm-linux-androideabi-$COMPILATOR_VERSION/prebuilt/$OS_ARCH
 PLATFORM_VERSION=android-5
+setup_paths
 build_amr
 build_aac
 build_fribidi
@@ -501,6 +378,7 @@ ADDITIONAL_CONFIGURE_FLAG=--enable-neon
 SONAME=libffmpeg-neon.so
 PREBUILT=$NDK/toolchains/arm-linux-androideabi-$COMPILATOR_VERSION/prebuilt/$OS_ARCH
 PLATFORM_VERSION=android-9
+setup_paths
 build_amr
 build_aac
 build_fribidi
