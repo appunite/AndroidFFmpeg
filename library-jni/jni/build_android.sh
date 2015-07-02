@@ -82,16 +82,19 @@ function setup_paths
 
 function build_x264
 {
+	echo "Starting build x264 for $ARCH"
 	cd x264
 	./configure --prefix=$(pwd)/$PREFIX --host=$ARCH-linux --enable-static $ADDITIONAL_CONFIGURE_FLAG || exit 1
 
 	make clean || exit 1
 	make -j4 install || exit 1
 	cd ..
+	echo "FINISHED x264 for $ARCH"
 }
 
 function build_amr
 {
+	echo "Starting build amr for $ARCH"
 	cd vo-amrwbenc
 	./configure \
 	    --prefix=$(pwd)/$PREFIX \
@@ -106,10 +109,12 @@ function build_amr
 	make clean || exit 1
 	make -j4 install || exit 1
 	cd ..
+	echo "FINISHED amr for $ARCH"
 }
 
 function build_aac
 {
+	echo "Starting build aac for $ARCH"
 	cd vo-aacenc
 	export PKG_CONFIG_LIBDIR=$(pwd)/$PREFIX/lib/pkgconfig/
 	export PKG_CONFIG_PATH=$(pwd)/$PREFIX/lib/pkgconfig/
@@ -126,9 +131,11 @@ function build_aac
 	make clean || exit 1
 	make -j4 install || exit 1
 	cd ..
+	echo "FINISHED aac for $ARCH"
 }
 function build_freetype2
 {
+	echo "Starting build freetype2 for $ARCH"
 	cd freetype2
 	./configure \
 	    --prefix=$(pwd)/$PREFIX \
@@ -143,9 +150,11 @@ function build_freetype2
 	make clean || exit 1
 	make -j4 install || exit 1
 	cd ..
+	echo "FINISHED freetype2 for $ARCH"
 }
 function build_ass
 {
+	echo "Starting build ass for $ARCH"
 	cd libass
 	./configure \
 	    --prefix=$(pwd)/$PREFIX \
@@ -161,9 +170,11 @@ function build_ass
 	make clean || exit 1
 	make V=1 -j4 install || exit 1
 	cd ..
+	echo "FINISHED ass for $ARCH"
 }
 function build_fribidi
 {
+	echo "Starting build fribidi for $ARCH"
 	cd fribidi
 	./configure \
 	    --prefix=$(pwd)/$PREFIX \
@@ -179,9 +190,11 @@ function build_fribidi
 	make clean || exit 1
 	make -j4 install || exit 1
 	cd ..
+	echo "FINISHED fribidi for $ARCH"
 }
 function build_ffmpeg
 {
+	echo "Starting build ffmpeg for $ARCH"
 	cd ffmpeg
 	./configure --target-os=linux \
 	    --prefix=$PREFIX \
@@ -281,12 +294,15 @@ function build_ffmpeg
 	make -j4 install || exit 1
 
 	cd ..
+	echo "FINISHED ffmpeg for $ARCH"
 }
 
 function build_one {
+	echo "Starting build one for $ARCH"
 	cd ffmpeg
 	${LD} -rpath-link=$PLATFORM/usr/lib -L$PLATFORM/usr/lib -L$PREFIX/lib  -soname $SONAME -shared -nostdlib -Bsymbolic --whole-archive --no-undefined -o $OUT_LIBRARY -lavcodec -lavformat -lavresample -lavutil -lswresample -lass -lfreetype -lfribidi -lswscale -lvo-aacenc -lvo-amrwbenc -lc -lm -lz -ldl -llog --dynamic-linker=/system/bin/linker -zmuldefs $PREBUILT/lib/gcc/$EABIARCH/$COMPILATOR_VERSION/libgcc.a || exit 1
 	cd ..
+	echo "FINISHED one for $ARCH"
 }
 
 #arm v5
