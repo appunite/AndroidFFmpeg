@@ -74,8 +74,8 @@ function setup_paths
 	export PKG_CONFIG_LIBDIR=$(pwd)/$PREFIX/lib/pkgconfig/
 	export PKG_CONFIG_PATH=$(pwd)/$PREFIX/lib/pkgconfig/
 
-	if [ ! -f $CC ]; then
-		print "Gcc does not exists in path: $CC"
+	if [ ! -f "${CROSS_COMPILE}gcc" ]; then
+		echo "Gcc does not exists in path: ${CROSS_COMPILE}gcc"
 		exit 1;
 	fi
 }
