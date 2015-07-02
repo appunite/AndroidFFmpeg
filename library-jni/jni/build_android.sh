@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 #
 # build_android.sh
 # Copyright (c) 2012 Jacek Marchwicki
@@ -65,8 +65,8 @@ function setup_paths
 	export CXX="${CROSS_COMPILE}g++ --sysroot=$PLATFORM"
 	export AS="${CROSS_COMPILE}gcc --sysroot=$PLATFORM"
 	export CC="${CROSS_COMPILE}gcc --sysroot=$PLATFORM"
-	export NM="${CROSS_COMPILE}nm"
 	export LD="${CROSS_COMPILE}ld"
+	export NM="${CROSS_COMPILE}nm"
 	export STRIP="${CROSS_COMPILE}strip"
 	export RANLIB="${CROSS_COMPILE}ranlib"
 	export AR="${CROSS_COMPILE}ar"
@@ -189,7 +189,7 @@ function build_ffmpeg
 	    --extra-libs="-lgcc" \
 	    --arch=$ARCH \
 	    --cc=$CC \
-	    --cross-prefix=$CROSS_PREFIX \
+	    --cross-prefix=$CROSS_COMPILE \
 	    --nm=$NM \
 	    --sysroot=$PLATFORM \
 	    --extra-cflags=" -O3 -fpic -DANDROID -DHAVE_SYS_UIO_H=1 -Dipv6mr_interface=ipv6mr_ifindex -fasm -Wno-psabi -fno-short-enums  -fno-strict-aliasing -finline-limit=300 $OPTIMIZE_CFLAGS " \
@@ -285,7 +285,7 @@ function build_ffmpeg
 
 function build_one {
 	cd ffmpeg
-	$LD -rpath-link=$PLATFORM/usr/lib -L$PLATFORM/usr/lib -L$PREFIX/lib  -soname $SONAME -shared -nostdlib -Bsymbolic --whole-archive --no-undefined -o $OUT_LIBRARY -lavcodec -lavformat -lavresample -lavutil -lswresample -lass -lfreetype -lfribidi -lswscale -lvo-aacenc -lvo-amrwbenc -lc -lm -lz -ldl -llog --dynamic-linker=/system/bin/linker -zmuldefs $PREBUILT/lib/gcc/$EABIARCH/$COMPILATOR_VERSION/libgcc.a || exit 1
+	${LD} -rpath-link=$PLATFORM/usr/lib -L$PLATFORM/usr/lib -L$PREFIX/lib  -soname $SONAME -shared -nostdlib -Bsymbolic --whole-archive --no-undefined -o $OUT_LIBRARY -lavcodec -lavformat -lavresample -lavutil -lswresample -lass -lfreetype -lfribidi -lswscale -lvo-aacenc -lvo-amrwbenc -lc -lm -lz -ldl -llog --dynamic-linker=/system/bin/linker -zmuldefs $PREBUILT/lib/gcc/$EABIARCH/$COMPILATOR_VERSION/libgcc.a || exit 1
 	cd ..
 }
 
