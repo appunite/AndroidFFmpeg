@@ -79,6 +79,11 @@ function setup_paths
 		echo "Gcc does not exists in path: ${CROSS_COMPILE}gcc"
 		exit 1;
 	fi
+
+	if [ ! -f "${PKG_CONFIG}" ]; then
+		echo "Pkg config does not exists in path: ${PKG_CONFIG}"
+		exit 1;
+	fi
 }
 
 function build_x264
