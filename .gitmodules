@@ -3,10 +3,10 @@
 	url = git://source.ffmpeg.org/ffmpeg.git
 [submodule "library-jni/jni/vo-aacenc"]
 	path = library-jni/jni/vo-aacenc
-	url = git://opencore-amr.git.sourceforge.net/gitroot/opencore-amr/vo-aacenc
+	url = git://git.code.sf.net/p/opencore-amr/vo-aacenc
 [submodule "library-jni/jni/vo-amrwbenc"]
 	path = library-jni/jni/vo-amrwbenc
-	url = git://opencore-amr.git.sourceforge.net/gitroot/opencore-amr/vo-amrwbenc
+	url = git://git.code.sf.net/p/opencore-amr/vo-amrwbenc
 [submodule "library-jni/jni/x264"]
 	path = library-jni/jni/x264
 	url = git://git.videolan.org/x264.git
