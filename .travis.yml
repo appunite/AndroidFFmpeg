@@ -1,6 +1,10 @@
 language: android
 jdk: oraclejdk7
 
+env:
+  logbal:
+    - NDK_VERSION=r10e
+
 cache:
   directories:
   - $HOME/.gradle/caches
@@ -20,11 +24,11 @@ before_install:
   - sudo apt-get update
   - sudo apt-get install -qq --force-yes libgd2-xpm ia32-libs ia32-libs-multiarch yasm
   # Android NDK
-  - if [ `uname -m` = x86_64]; then wget http://dl.google.com/android/ndk/android-ndk-r10e-linux-x86_64.bin -O ndk.bin; else wget http://dl.google.com/android/ndk/android-ndk-r10e-linux-x86.bin -O ndk.bin; fi
+  - if [ `uname -m` = x86_64]; then wget http://dl.google.com/android/ndk/android-ndk-$NDK_VERSION-linux-x86_64.bin -O ndk.bin; else wget http://dl.google.com/android/ndk/android-ndk-$NDK_VERSION-linux-x86.bin -O ndk.bin; fi
   - chmod a+x ndk.bin
-  - ./ndk.bin > /dev/null
+  - ./ndk.bin | egrep -v ^Extracting
   - rm ndk.bin
-  - export ANDROID_NDK_HOME=`pwd`/android-ndk-r10e
+  - export ANDROID_NDK_HOME=`pwd`/android-ndk-$NDK_VERSION
   - export NDK=${ANDROID_NDK_HOME}
   - export PATH=${PATH}:${ANDROID_HOME}/tools:${ANDROID_HOME}/platform-tools:${ANDROID_NDK_HOME}
 install:
