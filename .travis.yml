@@ -38,13 +38,12 @@ before_install:
   - ./ndk.bin | egrep -v ^Extracting
   - rm ndk.bin
   - export ANDROID_NDK_HOME=`pwd`/android-ndk-$NDK_VERSION
-  - export NDK=${ANDROID_NDK_HOME}
   - export PATH=${PATH}:${ANDROID_HOME}/tools:${ANDROID_HOME}/platform-tools:${ANDROID_NDK_HOME}
 install:
   - sh -c 'cd library-jni/jni/ && ./fetch.sh'
   - sh -c 'cd library-jni/jni && ./build_android.sh'
   - sh -c 'cd library-jni/jni && ndk-build'
-  - rm -rf $NDK
+  - rm -rf $ANDROID_NDK_HOME
   - rm -rf library-jni/jni
   - TERM=dumb ./gradlew build
 

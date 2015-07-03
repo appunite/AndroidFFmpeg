@@ -17,17 +17,17 @@
 
 set -x
 
-if [ "$NDK" = "" ]; then
-	echo NDK variable not set, exiting
-	echo "Use: export NDK=/your/path/to/android-ndk"
+if [ "$ANDROID_NDK_HOME" = "" ]; then
+	echo ANDROID_NDK_HOME variable not set, exiting
+	echo "Use: export ANDROID_NDK_HOME=/your/path/to/android-ndk"
 	exit 1
 fi
 
 # Get the newest arm-linux-androideabi version
 if [ -z "$COMPILATOR_VERSION" ]; then
-	DIRECTORIES=$NDK/toolchains/arm-linux-androideabi-*
+	DIRECTORIES=$ANDROID_NDK_HOME/toolchains/arm-linux-androideabi-*
 	for i in $DIRECTORIES; do
-		PROPOSED_NAME=${i#*$NDK/toolchains/arm-linux-androideabi-}
+		PROPOSED_NAME=${i#*$ANDROID_NDK_HOME/toolchains/arm-linux-androideabi-}
 		if [[ $PROPOSED_NAME =~ ^[0-9\.]+$ ]] ; then
 			echo "Available compilator version: $PROPOSED_NAME"
 			COMPILATOR_VERSION=$PROPOSED_NAME
@@ -40,19 +40,19 @@ if [ -z "$COMPILATOR_VERSION" ]; then
 	exit 1
 fi
 
-if [ ! -d $NDK/toolchains/arm-linux-androideabi-$COMPILATOR_VERSION ]; then
-	echo $NDK/toolchains/arm-linux-androideabi-$COMPILATOR_VERSION does not exist
+if [ ! -d $ANDROID_NDK_HOME/toolchains/arm-linux-androideabi-$COMPILATOR_VERSION ]; then
+	echo $ANDROID_NDK_HOME/toolchains/arm-linux-androideabi-$COMPILATOR_VERSION does not exist
 	exit 1
 fi
 echo "Using compilator version: $COMPILATOR_VERSION"
 
-OS_ARCH=`basename $NDK/toolchains/arm-linux-androideabi-$COMPILATOR_VERSION/prebuilt/*`
+OS_ARCH=`basename $ANDROID_NDK_HOME/toolchains/arm-linux-androideabi-$COMPILATOR_VERSION/prebuilt/*`
 echo "Using architecture: $OS_ARCH"
 
 
 function setup_paths
 {
-	export PLATFORM=$NDK/platforms/$PLATFORM_VERSION/arch-$ARCH/
+	export PLATFORM=$ANDROID_NDK_HOME/platforms/$PLATFORM_VERSION/arch-$ARCH/
 	if [ ! -d $PLATFORM ]; then
 		echo $PLATFORM does not exist
 		exit 1
@@ -330,7 +330,7 @@ PREFIX=../ffmpeg-build/armeabi
 OUT_LIBRARY=$PREFIX/libffmpeg.so
 ADDITIONAL_CONFIGURE_FLAG=
 SONAME=libffmpeg.so
-PREBUILT=$NDK/toolchains/arm-linux-androideabi-$COMPILATOR_VERSION/prebuilt/$OS_ARCH
+PREBUILT=$ANDROID_NDK_HOME/toolchains/arm-linux-androideabi-$COMPILATOR_VERSION/prebuilt/$OS_ARCH
 PLATFORM_VERSION=android-5
 setup_paths
 build_amr
@@ -349,7 +349,7 @@ PREFIX=../ffmpeg-build/x86
 OUT_LIBRARY=$PREFIX/libffmpeg.so
 ADDITIONAL_CONFIGURE_FLAG=--disable-asm
 SONAME=libffmpeg.so
-PREBUILT=$NDK/toolchains/x86-$COMPILATOR_VERSION/prebuilt/$OS_ARCH
+PREBUILT=$ANDROID_NDK_HOME/toolchains/x86-$COMPILATOR_VERSION/prebuilt/$OS_ARCH
 PLATFORM_VERSION=android-9
 setup_paths
 build_amr
@@ -368,7 +368,7 @@ PREFIX=../ffmpeg-build/mips
 OUT_LIBRARY=$PREFIX/libffmpeg.so
 ADDITIONAL_CONFIGURE_FLAG="--disable-mips32r2"
 SONAME=libffmpeg.so
-PREBUILT=$NDK/toolchains/mipsel-linux-android-$COMPILATOR_VERSION/prebuilt/$OS_ARCH
+PREBUILT=$ANDROID_NDK_HOME/toolchains/mipsel-linux-android-$COMPILATOR_VERSION/prebuilt/$OS_ARCH
 PLATFORM_VERSION=android-9
 setup_paths
 build_amr
@@ -388,7 +388,7 @@ PREFIX=../ffmpeg-build/armeabi-v7a
 OUT_LIBRARY=$PREFIX/libffmpeg.so
 ADDITIONAL_CONFIGURE_FLAG=
 SONAME=libffmpeg.so
-PREBUILT=$NDK/toolchains/arm-linux-androideabi-$COMPILATOR_VERSION/prebuilt/$OS_ARCH
+PREBUILT=$ANDROID_NDK_HOME/toolchains/arm-linux-androideabi-$COMPILATOR_VERSION/prebuilt/$OS_ARCH
 PLATFORM_VERSION=android-5
 setup_paths
 build_amr
@@ -408,7 +408,7 @@ PREFIX=../ffmpeg-build/armeabi-v7a-neon
 OUT_LIBRARY=../ffmpeg-build/armeabi-v7a/libffmpeg-neon.so
 ADDITIONAL_CONFIGURE_FLAG=--enable-neon
 SONAME=libffmpeg-neon.so
-PREBUILT=$NDK/toolchains/arm-linux-androideabi-$COMPILATOR_VERSION/prebuilt/$OS_ARCH
+PREBUILT=$ANDROID_NDK_HOME/toolchains/arm-linux-androideabi-$COMPILATOR_VERSION/prebuilt/$OS_ARCH
 PLATFORM_VERSION=android-9
 setup_paths
 build_amr
