@@ -89,6 +89,7 @@ function setup_paths
 			exit 1
 		fi
 		set -e
+		export PKG_CONFIG=${SYS_PKG_CONFIG}
 		echo "Because we have local pkg-config we will use it ${PKG_CONFIG}"
 	fi
 }
