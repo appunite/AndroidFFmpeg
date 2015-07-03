@@ -83,16 +83,19 @@ function setup_paths
 	fi
 
 	if [ ! -f "${PKG_CONFIG}" ]; then
-		echo "Pkg config does not exists in path: ${PKG_CONFIG}"
+		echo "Pkg config does not exists in path: ${PKG_CONFIG} - Probably BUG in NDK but..."
 		set +e
 		SYS_PKG_CONFIG=$(which pkg-config)
 		if [ "$?" -ne 0 ]; then
-			echo "This system does not contain system pkg-config, so we can not use it"
+			echo "This system does not contain system pkg-config, so we can do anything"
 			exit 1
 		fi
 		set -e
-		export PKG_CONFIG=${SYS_PKG_CONFIG}
-		echo "Because we have local pkg-config we will use it ${PKG_CONFIG}"
+		cat > $PKG_CONFIG << EOF
+#!/bin/bash
+pkg-config \$*
+EOF
+		echo "Because we have local pkg-config we will create it in ${PKG_CONFIG} directory using ${SYS_PKG_CONFIG}"
 	fi
 }
 
