@@ -15,6 +15,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -x
+
 if [ "$NDK" = "" ]; then
 	echo NDK variable not set, exiting
 	echo "Use: export NDK=/your/path/to/android-ndk"
