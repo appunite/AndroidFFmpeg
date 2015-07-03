@@ -95,6 +95,7 @@ function setup_paths
 #!/bin/bash
 pkg-config \$*
 EOF
+		chmod u+x $PKG_CONFIG
 		echo "Because we have local pkg-config we will create it in ${PKG_CONFIG} directory using ${SYS_PKG_CONFIG}"
 	fi
 }
