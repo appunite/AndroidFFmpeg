@@ -74,8 +74,8 @@ function setup_paths
 	export RANLIB="${CROSS_COMPILE}ranlib"
 	export AR="${CROSS_COMPILE}ar"
 	export LDFLAGS="-Wl,-rpath-link=$PLATFORM/usr/lib -L$PLATFORM/usr/lib -nostdlib -lc -lm -ldl -llog"
-	export PKG_CONFIG_LIBDIR=$(pwd)/$PREFIX/lib/pkgconfig/
-	export PKG_CONFIG_PATH=$(pwd)/$PREFIX/lib/pkgconfig/
+	export PKG_CONFIG_LIBDIR=$PREFIX/lib/pkgconfig/
+	export PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig/
 
 	if [ ! -f "${CROSS_COMPILE}gcc" ]; then
 		echo "Gcc does not exists in path: ${CROSS_COMPILE}gcc"
@@ -100,10 +100,10 @@ function build_x264
 {
 	echo "Starting build x264 for $ARCH"
 	cd x264
-	./configure --prefix=$(pwd)/$PREFIX --host=$ARCH-linux --enable-static $ADDITIONAL_CONFIGURE_FLAG || exit 1
+	./configure --prefix=$PREFIX --host=$ARCH-linux --enable-static $ADDITIONAL_CONFIGURE_FLAG
 
-	make clean || exit 1
-	make -j4 install || exit 1
+	make clean
+	make -j4 install
 	cd ..
 	echo "FINISHED x264 for $ARCH"
 }
@@ -113,17 +113,16 @@ function build_amr
 	echo "Starting build amr for $ARCH"
 	cd vo-amrwbenc
 	./configure \
-	    --prefix=$(pwd)/$PREFIX \
+	    --prefix=$PREFIX \
 	    --host=$ARCH-linux \
 	    --disable-dependency-tracking \
 	    --disable-shared \
 	    --enable-static \
 	    --with-pic \
-	    $ADDITIONAL_CONFIGURE_FLAG \
-	    || exit 1
+	    $ADDITIONAL_CONFIGURE_FLAG
 
-	make clean || exit 1
-	make -j4 install || exit 1
+	make clean
+	make -j4 install
 	cd ..
 	echo "FINISHED amr for $ARCH"
 }
@@ -132,20 +131,17 @@ function build_aac
 {
 	echo "Starting build aac for $ARCH"
 	cd vo-aacenc
-	export PKG_CONFIG_LIBDIR=$(pwd)/$PREFIX/lib/pkgconfig/
-	export PKG_CONFIG_PATH=$(pwd)/$PREFIX/lib/pkgconfig/
 	./configure \
-	    --prefix=$(pwd)/$PREFIX \
+	    --prefix=$PREFIX \
 	    --host=$ARCH-linux \
 	    --disable-dependency-tracking \
 	    --disable-shared \
 	    --enable-static \
 	    --with-pic \
-	    $ADDITIONAL_CONFIGURE_FLAG \
-	    || exit 1
+	    $ADDITIONAL_CONFIGURE_FLAG
 
-	make clean || exit 1
-	make -j4 install || exit 1
+	make clean
+	make -j4 install
 	cd ..
 	echo "FINISHED aac for $ARCH"
 }
@@ -154,17 +150,16 @@ function build_freetype2
 	echo "Starting build freetype2 for $ARCH"
 	cd freetype2
 	./configure \
-	    --prefix=$(pwd)/$PREFIX \
+	    --prefix=$PREFIX \
 	    --host=$ARCH-linux \
 	    --disable-dependency-tracking \
 	    --disable-shared \
 	    --enable-static \
 	    --with-pic \
-	    $ADDITIONAL_CONFIGURE_FLAG \
-	    || exit 1
+	    $ADDITIONAL_CONFIGURE_FLAG
 
-	make clean || exit 1
-	make -j4 install || exit 1
+	make clean
+	make -j4 install
 	cd ..
 	echo "FINISHED freetype2 for $ARCH"
 }
@@ -173,18 +168,17 @@ function build_ass
 	echo "Starting build ass for $ARCH"
 	cd libass
 	./configure \
-	    --prefix=$(pwd)/$PREFIX \
+	    --prefix=$PREFIX \
 	    --host=$ARCH-linux \
 	    --disable-fontconfig \
 	    --disable-dependency-tracking \
 	    --disable-shared \
 	    --enable-static \
 	    --with-pic \
-	    $ADDITIONAL_CONFIGURE_FLAG \
-	    || exit 1
+	    $ADDITIONAL_CONFIGURE_FLAG
 
-	make clean || exit 1
-	make V=1 -j4 install || exit 1
+	make clean
+	make V=1 -j4 install
 	cd ..
 	echo "FINISHED ass for $ARCH"
 }
@@ -193,18 +187,17 @@ function build_fribidi
 	echo "Starting build fribidi for $ARCH"
 	cd fribidi
 	./configure \
-	    --prefix=$(pwd)/$PREFIX \
+	    --prefix=$PREFIX \
 	    --host=$ARCH-linux \
 	    --disable-bin \
 	    --disable-dependency-tracking \
 	    --disable-shared \
 	    --enable-static \
 	    --with-pic \
-	    $ADDITIONAL_CONFIGURE_FLAG \
-	    || exit 1
+	    $ADDITIONAL_CONFIGURE_FLAG
 
-	make clean || exit 1
-	make -j4 install || exit 1
+	make clean
+	make -j4 install
 	cd ..
 	echo "FINISHED fribidi for $ARCH"
 }
@@ -304,10 +297,9 @@ function build_ffmpeg
 	    --enable-version3 \
 	    --enable-memalign-hack \
 	    --enable-asm \
-	    $ADDITIONAL_CONFIGURE_FLAG \
-	    || exit 1
-	make clean || exit 1
-	make -j4 install || exit 1
+	    $ADDITIONAL_CONFIGURE_FLAG
+	make clean
+	make -j4 install
 
 	cd ..
 	echo "FINISHED ffmpeg for $ARCH"
@@ -316,7 +308,7 @@ function build_ffmpeg
 function build_one {
 	echo "Starting build one for $ARCH"
 	cd ffmpeg
-	${LD} -rpath-link=$PLATFORM/usr/lib -L$PLATFORM/usr/lib -L$PREFIX/lib  -soname $SONAME -shared -nostdlib -Bsymbolic --whole-archive --no-undefined -o $OUT_LIBRARY -lavcodec -lavformat -lavresample -lavutil -lswresample -lass -lfreetype -lfribidi -lswscale -lvo-aacenc -lvo-amrwbenc -lc -lm -lz -ldl -llog --dynamic-linker=/system/bin/linker -zmuldefs $PREBUILT/lib/gcc/$EABIARCH/$COMPILATOR_VERSION/libgcc.a || exit 1
+	${LD} -rpath-link=$PLATFORM/usr/lib -L$PLATFORM/usr/lib -L$PREFIX/lib  -soname $SONAME -shared -nostdlib -Bsymbolic --whole-archive --no-undefined -o $OUT_LIBRARY -lavcodec -lavformat -lavresample -lavutil -lswresample -lass -lfreetype -lfribidi -lswscale -lvo-aacenc -lvo-amrwbenc -lc -lm -lz -ldl -llog --dynamic-linker=/system/bin/linker -zmuldefs $PREBUILT/lib/gcc/$EABIARCH/$COMPILATOR_VERSION/libgcc.a
 	cd ..
 	echo "FINISHED one for $ARCH"
 }
@@ -326,7 +318,7 @@ EABIARCH=arm-linux-androideabi
 ARCH=arm
 CPU=armv5
 OPTIMIZE_CFLAGS="-marm -march=$CPU"
-PREFIX=../ffmpeg-build/armeabi
+PREFIX=$(pwd)/ffmpeg-build/armeabi
 OUT_LIBRARY=$PREFIX/libffmpeg.so
 ADDITIONAL_CONFIGURE_FLAG=
 SONAME=libffmpeg.so
@@ -345,7 +337,7 @@ build_one
 EABIARCH=i686-linux-android
 ARCH=x86
 OPTIMIZE_CFLAGS="-m32"
-PREFIX=../ffmpeg-build/x86
+PREFIX=$(pwd)/ffmpeg-build/x86
 OUT_LIBRARY=$PREFIX/libffmpeg.so
 ADDITIONAL_CONFIGURE_FLAG=--disable-asm
 SONAME=libffmpeg.so
@@ -364,7 +356,7 @@ build_one
 EABIARCH=mipsel-linux-android
 ARCH=mips
 OPTIMIZE_CFLAGS="-EL -march=mips32 -mips32 -mhard-float"
-PREFIX=../ffmpeg-build/mips
+PREFIX=$(pwd)/ffmpeg-build/mips
 OUT_LIBRARY=$PREFIX/libffmpeg.so
 ADDITIONAL_CONFIGURE_FLAG="--disable-mips32r2"
 SONAME=libffmpeg.so
@@ -384,7 +376,7 @@ EABIARCH=arm-linux-androideabi
 ARCH=arm
 CPU=armv7-a
 OPTIMIZE_CFLAGS="-mfloat-abi=softfp -mfpu=vfpv3-d16 -marm -march=$CPU "
-PREFIX=../ffmpeg-build/armeabi-v7a
+PREFIX=$(pwd)/ffmpeg-build/armeabi-v7a
 OUT_LIBRARY=$PREFIX/libffmpeg.so
 ADDITIONAL_CONFIGURE_FLAG=
 SONAME=libffmpeg.so
@@ -404,7 +396,7 @@ EABIARCH=arm-linux-androideabi
 ARCH=arm
 CPU=armv7-a
 OPTIMIZE_CFLAGS="-mfloat-abi=softfp -mfpu=neon -marm -march=$CPU -mtune=cortex-a8 -mthumb -D__thumb__ "
-PREFIX=../ffmpeg-build/armeabi-v7a-neon
+PREFIX=$(pwd)/ffmpeg-build/armeabi-v7a-neon
 OUT_LIBRARY=../ffmpeg-build/armeabi-v7a/libffmpeg-neon.so
 ADDITIONAL_CONFIGURE_FLAG=--enable-neon
 SONAME=libffmpeg-neon.so
