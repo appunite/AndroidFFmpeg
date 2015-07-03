@@ -108,6 +108,7 @@ function build_x264
 
 	make clean
 	make -j4 install
+	make clean
 	cd ..
 	echo "FINISHED x264 for $ARCH"
 }
@@ -127,6 +128,7 @@ function build_amr
 
 	make clean
 	make -j4 install
+	make clean
 	cd ..
 	echo "FINISHED amr for $ARCH"
 }
@@ -146,6 +148,7 @@ function build_aac
 
 	make clean
 	make -j4 install
+	make clean
 	cd ..
 	echo "FINISHED aac for $ARCH"
 }
@@ -164,6 +167,7 @@ function build_freetype2
 
 	make clean
 	make -j4 install
+	make clean
 	cd ..
 	echo "FINISHED freetype2 for $ARCH"
 }
@@ -183,6 +187,7 @@ function build_ass
 
 	make clean
 	make V=1 -j4 install
+	make clean
 	cd ..
 	echo "FINISHED ass for $ARCH"
 }
@@ -202,6 +207,7 @@ function build_fribidi
 
 	make clean
 	make -j4 install
+	make clean
 	cd ..
 	echo "FINISHED fribidi for $ARCH"
 }
@@ -304,6 +310,7 @@ function build_ffmpeg
 	    $ADDITIONAL_CONFIGURE_FLAG
 	make clean
 	make -j4 install
+	make clean
 
 	cd ..
 	echo "FINISHED ffmpeg for $ARCH"
