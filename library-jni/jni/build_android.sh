@@ -82,7 +82,14 @@ function setup_paths
 
 	if [ ! -f "${PKG_CONFIG}" ]; then
 		echo "Pkg config does not exists in path: ${PKG_CONFIG}"
-		exit 1;
+		set +e
+		SYS_PKG_CONFIG=$(which pkg-config)
+		if [ "$?" -ne 0 ]; then
+			echo "This system does not contain system pkg-config, so we can not use it"
+			exit 1
+		fi
+		set -e
+		echo "Because we have local pkg-config we will use it ${PKG_CONFIG}"
 	fi
 }
 
