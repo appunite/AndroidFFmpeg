@@ -60,8 +60,9 @@ download libyuv and configure libs
 build external libraries
 Download r8e ndk: https://dl.google.com/android/ndk/android-ndk-r8e-darwin-x86_64.tar.bz2 or
 ttps://dl.google.com/android/ndk/android-ndk-r8e-linux-x86_64.tar.bz2
+Now it should also support r10e
 
-	export NDK=/your/path/to/android-ndk
+	export ANDROID_NDK_HOME=/your/path/to/android-ndk
 	./build_android.sh
 	
 make sure that files library-jni/jni/ffmpeg-build/{armeabi,armeabi-v7a,x86}/libffmpeg.so was created, otherwise you are in truble
@@ -69,7 +70,7 @@ make sure that files library-jni/jni/ffmpeg-build/{armeabi,armeabi-v7a,x86}/libf
 
 build ndk jni library (in `library-jni` directory)
 
-	export PATH="${PATH}:${NDK}"
+	export PATH="${PATH}:${ANDROID_NDK_HOME}"
 	ndk-build
 
 make sure that files library-jni/libs/{armeabi,armeabi-v7a,x86}/libffmpeg.so was created, otherwise you are in truble
