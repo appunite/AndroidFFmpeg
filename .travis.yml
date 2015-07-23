@@ -24,15 +24,6 @@ addons:
 cache:
   directories:
   - $HOME/.gradle/caches
-  - library-jni/jni/ffmpeg/.git
-  - library-jni/jni/freetype2/.git
-  - library-jni/jni/fribidi/.git
-  - library-jni/jni/libass/.git
-  - library-jni/jni/libyuv/.git
-  - library-jni/jni/tropicssl/.git
-  - library-jni/jni/vo-aacenc/.git
-  - library-jni/jni/vo-amrwbenc/.git
-  - library-jni/jni/x264/.git
  
 android:
   components:
