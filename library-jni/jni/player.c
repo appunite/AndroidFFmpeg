@@ -59,6 +59,7 @@
 #define FFMPEG_LOG_LEVEL AV_LOG_WARNING
 #define LOG_LEVEL 2
 #define LOG_TAG "player.c"
+#define LOG(...) {__android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__);}
 #define LOGI(level, ...) if (level <= LOG_LEVEL) {__android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__);}
 #define LOGE(level, ...) if (level <= LOG_LEVEL + 10) {__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__);}
 #define LOGW(level, ...) if (level <= LOG_LEVEL + 5) {__android_log_print(ANDROID_LOG_WARN, LOG_TAG, __VA_ARGS__);}
@@ -491,30 +492,25 @@ void player_decode_video_flush(struct DecoderData * decoder_data, JNIEnv * env) 
 }
 #ifdef SUBTITLES
 static void player_print_subtitle(AVSubtitle *sub, int64_t time) {
-	if (3 > LOG_LEVEL)
+	if (LOG_LEVEL >= 4)
 		return;
-	LOGI(3, "player_decode_subtitles pts: %fd", time / 1000000.0);
-	LOGI(3, "player_decode_subtitles sub.format: %d", sub->format);
-	LOGI(3,
-			"player_decode_subtitles sub.start_display_time: %d",
+	LOG("player_decode_subtitles pts: %fd", time / 1000000.0);
+	LOG("player_decode_subtitles sub.format: %d", sub->format);
+	LOG("player_decode_subtitles sub.start_display_time: %d",
 			sub->start_display_time);
-	LOGI(3,
-			"player_decode_subtitles sub.end_display_time: %d",
+	LOG("player_decode_subtitles sub.end_display_time: %d",
 			sub->end_display_time);
-	LOGI(3, "player_decode_subtitles sub.num_rects: %d", sub->num_rects);
+	LOG("player_decode_subtitles sub.num_rects: %d", sub->num_rects);
 	int i;
 	for (i = 0; i < sub->num_rects; ++i) {
 		AVSubtitleRect * rect = sub->rects[i];
-		LOGI(3,
-				"player_decode_subtitles --rect->(x,y,w,h) = (%d,%d,%d,%d)",
+		LOG("player_decode_subtitles --rect->(x,y,w,h) = (%d,%d,%d,%d)",
 				rect->x, rect->y, rect->w, rect->h);
-		LOGI(3,
-				"player_decode_subtitles --rect->nb_colors = %d",
+		LOG("player_decode_subtitles --rect->nb_colors = %d",
 				rect->nb_colors);
-		LOGI(3, "player_decode_subtitles --rect->text = %s", rect->text);
-		LOGI(3, "player_decode_subtitles --rect->ass = %s", rect->ass);
-		LOGI(3,
-				"player_decode_subtitles --rect->forced = %s",
+		LOG("player_decode_subtitles --rect->text = %s", rect->text);
+		LOG("player_decode_subtitles --rect->ass = %s", rect->ass);
+		LOG("player_decode_subtitles --rect->forced = %s",
 				rect->forced ? "true" : "false");
 		char *type = "undefined";
 		if (rect->type == SUBTITLE_NONE) {
@@ -526,9 +522,9 @@ static void player_print_subtitle(AVSubtitle *sub, int64_t time) {
 		} else if (rect->type == SUBTITLE_ASS) {
 			type = "ass";
 		}
-		LOGI(3, "player_decode_subtitles --rect->type = %s", type);
+		LOG("player_decode_subtitles --rect->type = %s", type);
 	}
-	LOGI(3, "player_decode_subtitles sub.pts: %d", sub->pts);
+	LOG("player_decode_subtitles sub.pts: %d", sub->pts);
 }
 void player_decode_subtitles_flush(struct DecoderData * decoder_data,
 		JNIEnv * env) {
@@ -1781,43 +1777,43 @@ int player_print_report_video_streams(JNIEnv* env, jobject thiz,
 
 void player_print_video_informations(struct Player *player,
 		const char *file_path) {
-	if (LOG_LEVEL >= 3) {
-		int i;
-		av_dump_format(player->input_format_ctx, 0, file_path, FALSE);
-		LOGI(3,
-				"player_set_data_source Number of streams: %d",
-				player->input_format_ctx->nb_streams);
-		for (i = 0; i < player->input_format_ctx->nb_streams; i++) {
-			AVStream *stream = player->input_format_ctx->streams[i];
-			AVCodecContext *codec = stream->codec;
-			LOGI(3, "- stream: %d", i);
-			AVDictionary *metadaat = stream->metadata;
-			AVDictionaryEntry *tag = NULL;
-			LOGI(3, "-- metadata:")
-			if (metadaat) {
-				while ((tag = av_dict_get(metadaat, "", tag, AV_DICT_IGNORE_SUFFIX))
-						!= NULL) {
-					LOGI(3, "--- %s = %s", tag->key, tag->value);
-				}
+	if (LOG_LEVEL >= 4) {
+		return;
+	}
+	int i;
+	av_dump_format(player->input_format_ctx, 0, file_path, FALSE);
+	LOG("player_set_data_source Number of streams: %d",
+			player->input_format_ctx->nb_streams);
+	for (i = 0; i < player->input_format_ctx->nb_streams; i++) {
+		AVStream *stream = player->input_format_ctx->streams[i];
+		AVCodecContext *codec = stream->codec;
+		LOG("- stream: %d", i);
+		AVDictionary *metadaat = stream->metadata;
+		AVDictionaryEntry *tag = NULL;
+		LOG("-- metadata:")
+		if (metadaat) {
+			while ((tag = av_dict_get(metadaat, "", tag, AV_DICT_IGNORE_SUFFIX))
+					!= NULL) {
+				LOG("--- %s = %s", tag->key, tag->value);
 			}
-			const AVCodecDescriptor *codesc = avcodec_descriptor_get(codec->codec_id);
-			LOGI(3, "-- codec_name: %s", codesc ? codesc->long_name : "");
-			char *codec_type = "other";
-			if (codec->codec_type == AVMEDIA_TYPE_AUDIO) {
-				codec_type = "audio";
-			} else if (codec->codec_type == AVMEDIA_TYPE_VIDEO) {
-				codec_type = "video";
-			} else if (codec->codec_type == AVMEDIA_TYPE_SUBTITLE) {
-				codec_type = "subtitle";
-			} else if (codec->codec_type == AVMEDIA_TYPE_ATTACHMENT) {
-				codec_type = "attachment";
-			} else if (codec->codec_type == AVMEDIA_TYPE_NB) {
-				codec_type = "nb";
-			} else if (codec->codec_type == AVMEDIA_TYPE_DATA) {
-				codec_type = "data";
-			}
-			LOGI(3, "-- codec_type: %s", codec_type);
 		}
+		const AVCodecDescriptor *codesc = avcodec_descriptor_get(codec->codec_id);
+		LOG("-- codec_name: %s", codesc ? codesc->long_name : "");
+		char *codec_type = "other";
+		if (codec->codec_type == AVMEDIA_TYPE_AUDIO) {
+			codec_type = "audio";
+		} else if (codec->codec_type == AVMEDIA_TYPE_VIDEO) {
+			codec_type = "video";
+		} else if (codec->codec_type == AVMEDIA_TYPE_SUBTITLE) {
+			codec_type = "subtitle";
+		} else if (codec->codec_type == AVMEDIA_TYPE_ATTACHMENT) {
+			codec_type = "attachment";
+		} else if (codec->codec_type == AVMEDIA_TYPE_NB) {
+			codec_type = "nb";
+		} else if (codec->codec_type == AVMEDIA_TYPE_DATA) {
+			codec_type = "data";
+		}
+		LOG("-- codec_type: %s", codec_type);
 	}
 }
 
