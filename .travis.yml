@@ -1,22 +1,29 @@
 language: android
 jdk: oraclejdk7
+sudo: false
 
 env:
   global:
     - NDK_VERSION=r10e
 
+addons:
+  apt:
+    packages:
+    - libgd2-xpm
+    - ia32-libs
+    - ia32-libs-multiarch
+    - yasm
+    - pkg-config
+    - make
+    - autoconf
+    - libtool
+    - make
+    - autoconf-archive
+    - automake
+
 cache:
   directories:
   - $HOME/.gradle/caches
-  - library-jni/jni/ffmpeg/.git
-  - library-jni/jni/freetype2/.git
-  - library-jni/jni/fribidi/.git
-  - library-jni/jni/libass/.git
-  - library-jni/jni/libyuv/.git
-  - library-jni/jni/tropicssl/.git
-  - library-jni/jni/vo-aacenc/.git
-  - library-jni/jni/vo-amrwbenc/.git
-  - library-jni/jni/x264/.git
  
 android:
   components:
@@ -29,9 +36,6 @@ android:
   - 'google-gdk-license-.+'
 
 before_install:
-  # required libs for android build tools
-  - sudo apt-get update
-  - sudo apt-get install -qq --force-yes libgd2-xpm ia32-libs ia32-libs-multiarch yasm pkg-config make autoconf libtool make autoconf-archive automake
   # Android NDK
   - if [ `uname -m` = x86_64 ]; then wget http://dl.google.com/android/ndk/android-ndk-$NDK_VERSION-linux-x86_64.bin -O ndk.bin; else wget http://dl.google.com/android/ndk/android-ndk-$NDK_VERSION-linux-x86.bin -O ndk.bin; fi
   - chmod a+x ndk.bin
