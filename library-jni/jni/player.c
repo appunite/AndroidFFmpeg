@@ -422,18 +422,29 @@ int player_decode_audio(struct DecoderData * decoder_data, JNIEnv * env,
 
 	LOGI(3, "player_decode_audio decoding");
 	AVPacket *packet = packet_data->packet;
-	int len = avcodec_decode_audio4(ctx, frame, &got_frame_ptr, packet);
+
+	// Some videos will not decode the entire next frame once and will require multiple decoding
+	do {
+		int len = avcodec_decode_audio4(ctx, frame, &got_frame_ptr, packet);
+		if (len >= 0) {
+			packet->dts = packet->pts = AV_NOPTS_VALUE;
+			if (packet->data) {
+				packet->data += len;
+				packet->size -= len;
+
+				if (packet->size <= 0)
+					break;
+			} else if (!got_frame_ptr) {
+				LOGI(10, "player_decode_audio Audio frame not finished\n");
+				return 0;
+			}
+		} else {
+			 LOGE(1, "Fail decoding audio %d\n", len);
+			return -ERROR_WHILE_DECODING_VIDEO;
+		}
+	} while(!got_frame_ptr);
 
 	int64_t pts = packet->pts;
-
-	if (len < 0) {
-		LOGE(1, "Fail decoding audio %d\n", len);
-		return -ERROR_WHILE_DECODING_VIDEO;
-	}
-	if (!got_frame_ptr) {
-		LOGI(10, "player_decode_audio Audio frame not finished\n");
-		return 0;
-	}
 
 	int original_data_size = av_samples_get_buffer_size(NULL, ctx->channels,
 			frame->nb_samples, ctx->sample_fmt, 1);
@@ -1075,7 +1086,10 @@ void * player_decode(void * data) {
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &timespec1);
 #endif // MEASURE_TIME
 		if (codec_type == AVMEDIA_TYPE_AUDIO) {
-			err = player_decode_audio(decoder_data, env, packet_data);
+			// Some audio sources need to be decoded multiple times when packet buffer is not empty
+			while(err >= 0 && packet_data->packet->size > 0) {
+				err = player_decode_audio(decoder_data, env, packet_data);
+			}
 		} else if (codec_type == AVMEDIA_TYPE_VIDEO) {
 			err = player_decode_video(decoder_data, env, packet_data);
 		} else
