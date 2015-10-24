@@ -24,4 +24,4 @@
 	url = git://git.sv.gnu.org/freetype/freetype2.git
 [submodule "library-jni/jni/libyuv"]
 	path = library-jni/jni/libyuv
-	url = https://git.chromium.org/external/libyuv.git
+	url = https://chromium.googlesource.com/external/libyuv
