@@ -34,6 +34,10 @@ you have to install:
 
 on Debian/Ubuntu - you can use apt-get
 
+- on ubuntu you also need libtool 
+
+sudo apt-get install build-essential libtool
+
 on Mac - you can use tool brew from homebrew project. You have additionally install xcode. 
 
 ## Bug reporting and questions
