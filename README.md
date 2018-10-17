@@ -45,7 +45,7 @@ on Mac - you can use tool brew from homebrew project. You have additionally inst
 ### Go to the work
 downloading source code 
 
-	git clone https://github.com/appunite/AndroidFFmpeg.git AndroidFFmpeg
+	git clone --recurse-submodules https://github.com/appunite/AndroidFFmpeg.git AndroidFFmpeg
 	cd AndroidFFmpeg
 	git submodule init
 	git submodule sync #if you are updating source code
