@@ -57,7 +57,7 @@
 #include "sync.h"
 
 #define FFMPEG_LOG_LEVEL AV_LOG_WARNING
-#define LOG_LEVEL 2
+#define LOG_LEVEL 10
 #define LOG_TAG "player.c"
 #define LOG(...) {__android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__);}
 #define LOGI(level, ...) if (level <= LOG_LEVEL) {__android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__);}
@@ -153,7 +153,7 @@ struct DecoderData {
 	int stream_no;
 };
 
-#define MAX_STREAMS 3
+#define MAX_STREAMS 5
 
 struct Player {
 	JavaVM *get_javavm;
@@ -240,6 +240,13 @@ struct Player {
 
 	int64_t start_time;
 	int64_t pause_time;
+	
+	//Jay
+	int64_t time_offset;
+	int64_t flag_time_offset_acquired;
+	int64_t t_seek;
+	int64_t t_UpCurrentTime;
+	int64_t t_UpDurationTime;
 
 #ifdef SUBTITLES
 	int subtitle_stream_no;
@@ -521,8 +528,8 @@ static void player_print_subtitle(AVSubtitle *sub, int64_t time) {
 				rect->nb_colors);
 		LOG("player_decode_subtitles --rect->text = %s", rect->text);
 		LOG("player_decode_subtitles --rect->ass = %s", rect->ass);
-		LOG("player_decode_subtitles --rect->forced = %s",
-				rect->forced ? "true" : "false");
+//		LOG("player_decode_subtitles --rect->forced = %s",
+//				rect->forced ? "true" : "false");
 		char *type = "undefined";
 		if (rect->type == SUBTITLE_NONE) {
 			type = "none";
@@ -669,6 +676,10 @@ void player_update_current_time(struct State *state,
 	struct Player *player = state->player;
 	jboolean jis_finished = is_finished ? JNI_TRUE : JNI_FALSE;
 
+	//jay
+	player->t_UpCurrentTime = current_time;
+	player->t_UpDurationTime = video_duration;
+	
 	LOGI(4, "player_update_current_time: %f/%f",
 			current_time/1000000.0, video_duration/1000000.0);
 	(*state->env)->CallVoidMethod(state->env, player->thiz,
@@ -740,25 +751,45 @@ enum WaitFuncRet player_wait_for_frame(struct Player *player, int64_t stream_tim
 				stream_time/1000000.0,
 				current_video_time/1000000.0);
 
-		int64_t sleep_time = stream_time - current_video_time;
-
+		//Jay
+		int64_t sleep_time = stream_time - player->time_offset - current_video_time;
+		//int64_t sleep_time = stream_time - current_video_time;
+		
 		LOGI(8,
 				"player_wait_for_frame[%d] Waiting for frame: sleeping: %" SCNd64,
 				stream_no, sleep_time);
 
+		
+		//Jay   
 		if (sleep_time < -300000ll) {
 			// 300 ms late
+			if (sleep_time < -1000000ll) { //1000ms
+				
+				int64_t new_value = player->start_time - sleep_time;
+				
+				LOGI(4,
+						"player_wait_for_frame[%d] correcting %f to %f because late",
+						stream_no, (av_gettime() - player->start_time) / 1000000.0,
+						(av_gettime() - new_value) / 1000000.0);
+				
+				ret = WAIT_FUNC_RET_SKIP;
+				break;
+			
+			}
+			
+			
 			int64_t new_value = player->start_time - sleep_time;
 
 			LOGI(4,
 					"player_wait_for_frame[%d] correcting %f to %f because late",
 					stream_no, (av_gettime() - player->start_time) / 1000000.0,
 					(av_gettime() - new_value) / 1000000.0);
-
+           
 			player->start_time = new_value;
 			pthread_cond_broadcast(&player->cond_queue);
+			
 		}
-
+	
 		if (sleep_time <= MIN_SLEEP_TIME_US) {
 			// We do not need to wait if time is slower then minimal sleep time
 			break;
@@ -799,6 +830,10 @@ int player_decode_video(struct DecoderData * decoder_data, JNIEnv * env,
 	AVFrame *rgb_frame = player->rgb_frame;
 	ANativeWindow_Buffer buffer;
 	ANativeWindow * window;
+	
+	//Jay
+	//player->time_offset = 0;
+	//player->flag_time_offset_acquired = 0;
 
 #ifdef MEASURE_TIME
 	struct timespec timespec1, timespec2, diff;
@@ -939,12 +974,25 @@ int player_decode_video(struct DecoderData * decoder_data, JNIEnv * env,
 		pts = 0;
 	}
 	int64_t time = av_rescale_q(pts, stream->time_base, AV_TIME_BASE_Q);
-	LOGI(10,
-			"player_decode_video Decoded video frame: %f, time_base: %" SCNd64,
-			time/1000000.0, pts);
-	player_wait_for_frame(player, time, stream_no);
-
-
+	
+	
+	//[[Jay
+    if (player->flag_time_offset_acquired == 0 &&   pts != AV_NOPTS_VALUE) {
+    pthread_mutex_lock(&player->mutex_queue);
+        player->start_time = av_gettime();
+    player->pause_time = player->start_time;
+        player->time_offset = time;
+        player->flag_time_offset_acquired = 1;
+    pthread_mutex_unlock(&player->mutex_queue);
+    }
+    else{
+    	LOGI(10,
+    			"player_decode_video Decoded video frame: %f, time_base: %" SCNd64,
+    			time/1000000.0, pts);
+    	player_wait_for_frame(player, time, stream_no);
+    }
+    //]]
+	
 #ifdef SUBTITLES
 
 	if ((player->subtitle_stream_no >= 0)) {
@@ -1088,6 +1136,20 @@ void * player_decode(void * data) {
 		if (codec_type == AVMEDIA_TYPE_AUDIO) {
 			// Some audio sources need to be decoded multiple times when packet buffer is not empty
 			while(err >= 0 && packet_data->packet->size > 0) {
+				//LOGI(10, "jay :: stream test");
+				//struct Player *player = decoder_data->player;
+				int stream_no = decoder_data->stream_no;
+				//AVCodecContext * ctx = player->input_codec_ctxs[stream_no];
+				//AVFrame * frame = player->input_frames[stream_no];
+				LOGI(10, "stream test[%d]", stream_no);
+				/*
+				LOGI(8,
+						"stream test[%d = %s] = (%f) - (%f)",
+						stream_no,
+						player->video_stream_no == stream_no ? "Video" : "Audio",
+						stream_time/1000000.0,
+						current_video_time/1000000.0);
+				*/
 				err = player_decode_audio(decoder_data, env, packet_data);
 			}
 		} else if (codec_type == AVMEDIA_TYPE_VIDEO) {
@@ -1122,12 +1184,14 @@ void * player_decode(void * data) {
 		if (!packet_data->end_of_stream) {
 			av_free_packet(packet_data->packet);
 		}
+		
+		//Jay  - live에.. 디코딩 fail이면 큐팝?!
 		queue_pop_finish(queue, &player->mutex_queue, &player->cond_queue);
 		if (err < 0) {
-			pthread_mutex_lock(&player->mutex_queue);
-			goto stop;
+			//pthread_mutex_lock(&player->mutex_queue);
+			//goto stop;
 		}
-
+		
 		goto end_loop;
 
 		stop:
@@ -1241,6 +1305,8 @@ void * player_read_from_stream(void *data) {
 	JavaVMAttachArgs thread_spec = { JNI_VERSION_1_4, "FFmpegReadFromStream",
 			NULL };
 
+
+			
 	jint ret = (*player->get_javavm)->AttachCurrentThread(player->get_javavm,
 			&env, &thread_spec);
 	if (ret) {
@@ -1372,6 +1438,7 @@ void * player_read_from_stream(void *data) {
 				player->input_stream_numbers[player->video_stream_no];
 		seek_input_stream = player->input_streams[player->video_stream_no];
 
+		
 		// getting seek target time in time_base value
 		seek_target = av_rescale_q(
 				player->seek_position, AV_TIME_BASE_Q,
@@ -1379,9 +1446,10 @@ void * player_read_from_stream(void *data) {
 		LOGI(3, "player_read_from_stream seeking to: "
 		"%ds, time_base: %f", player->seek_position / 1000000.0, seek_target);
 
+
 		// seeking
 		if (av_seek_frame(player->input_format_ctx, seek_input_stream_number,
-				seek_target, 0) < 0) {
+				seek_target, AVSEEK_FLAG_ANY) < 0) {
 			// seeking error - trying to play movie without it
 			LOGE(1, "Error while seeking");
 			player->seek_position = DO_NOT_SEEK;
@@ -1394,6 +1462,7 @@ void * player_read_from_stream(void *data) {
 		int64_t current_time = av_gettime();
 		player->start_time = current_time - player->seek_position;
 		player->pause_time = current_time;
+		player->t_seek  = current_time;
 
 		// request stream to flush
 		player_assign_to_no_boolean_array(player, player->flush_streams, TRUE);
@@ -1448,8 +1517,14 @@ int player_write_audio(struct DecoderData *decoder_data, JNIEnv *env,
 	int stream_no = decoder_data->stream_no;
 	int err = ERROR_NO_ERROR;
 	int ret;
+	
+	//Jay
+	//player->time_offset = 0;
+	//player->flag_time_offset_acquired = 0;
+	
 	AVCodecContext * c = player->input_codec_ctxs[stream_no];
 	AVStream *stream = player->input_streams[stream_no];
+	
 	LOGI(10, "player_write_audio Writing audio frame")
 
 	jbyteArray samples_byte_array = (*env)->NewByteArray(env, data_size);
@@ -1457,26 +1532,76 @@ int player_write_audio(struct DecoderData *decoder_data, JNIEnv *env,
 		err = -ERROR_NOT_CREATED_AUDIO_SAMPLE_BYTE_ARRAY;
 		goto end;
 	}
+	
+	int64_t current_video_time_mask = player_get_current_video_time(player);
 
 	if (pts != AV_NOPTS_VALUE) {
 		player->audio_clock = av_rescale_q(pts, stream->time_base, AV_TIME_BASE_Q);
 //				av_q2d(stream->time_base) * pts;
 		LOGI(9, "player_write_audio - read from pts")
-	} else {
+	} else {	
 		int64_t sample_time = original_data_size;
+		LOGI(9, "jay debug : player->t_seek = %f", player->t_seek/1000000.0);
+		LOGI(9, "jay debug : original_data_size = %f", sample_time/1000000.0);
 		sample_time *= 1000000ll;
+		//LOGI(9, "jay debug : original_data_size = %ds", sample_time);
+		//jay
+		LOGI(9, "jay debug : sample_time = %f", sample_time/1000000.0);
+		//sample_time *= player->t_seek;
+		//LOGI(9, "jay debug : sample_time = %fd", sample_time);
 		sample_time /= c->channels;
 		sample_time /= c->sample_rate;
 		sample_time /= av_get_bytes_per_sample(c->sample_fmt);
 		player->audio_clock += sample_time;
+		LOGI(9, "jay debug : sample_time_last = %f", sample_time/1000000.0);
+		LOGI(9, "jay debug : current_video_time_mask = %f", current_video_time_mask/1000000.0);
+		LOGI(9, "jay debug : audio_clock = %f", player->audio_clock/1000000.0);
+		
+		//jay audio cmtx masking
+		if(current_video_time_mask/1000000.0  >  player->audio_clock/1000000.0)
+		{
+			//player->audio_clock = ((sample_time/1000000.0) * current_video_time_mask);
+			int64_t t_diff = (current_video_time_mask) - (player->audio_clock);
+			int64_t t_sync = player->audio_clock + t_diff;
+			player->audio_clock += t_diff;
+			LOGI(9, "jay debug : cmtx masking = %f", t_diff/1000000.0);
+			LOGI(9, "jay debug : t_sync = %f", t_sync/1000000.0);
+		}
+
 		LOGI(9, "player_write_audio - added")
 	}
-	enum WaitFuncRet wait_ret = player_wait_for_frame(player,
-			player->audio_clock + AUDIO_TIME_ADJUST_US, stream_no);
-	if (wait_ret == WAIT_FUNC_RET_SKIP) {
-		goto end;
-	}
+	
+	//jay - if playing live stream, drop video frame at here. 
+	//[[ 
+    if (player->flag_time_offset_acquired == 0 &&   pts != AV_NOPTS_VALUE) {
+    pthread_mutex_lock(&player->mutex_queue);
+        player->start_time = av_gettime();
+    player->pause_time = player->start_time;
+        player->time_offset = time;
+        player->flag_time_offset_acquired = 1;
+    pthread_mutex_unlock(&player->mutex_queue);
+    }
+    else{
 
+    	LOGI(9, "player_write_audio - added")
+    	LOGI(9, "jay debug : current_time = %f", player->t_UpCurrentTime/1000000.0);
+    	LOGI(9, "jay debug : video_duration = %f", player->t_UpDurationTime/1000000.0);
+    	
+		if(player->t_UpCurrentTime - player->t_UpDurationTime == 0){
+			LOGI(9, "player_write_audio - Playing Live stream..!!! ")
+		}
+		else{
+	    	enum WaitFuncRet wait_ret = player_wait_for_frame(player,
+	      			player->audio_clock + AUDIO_TIME_ADJUST_US, stream_no);
+	        
+	    	if (wait_ret == WAIT_FUNC_RET_SKIP) {
+	    		goto end;
+	    	}
+		}
+    }	
+    //]]
+	
+    
 	LOGI(10, "player_write_audio Writing sample data")
 
 	jbyte *jni_samples = (*env)->GetByteArrayElements(env, samples_byte_array,
@@ -1860,7 +1985,7 @@ int player_alloc_queues(struct State *state) {
 	int capture_streams_no = player->caputre_streams_no;
 	int stream_no;
 	for (stream_no = 0; stream_no < capture_streams_no; ++stream_no) {
-		player->packets[stream_no] = queue_init_with_custom_lock(50,
+		player->packets[stream_no] = queue_init_with_custom_lock(1000,
 				(queue_fill_func) player_fill_packet,
 				(queue_free_func) player_free_packet, state, state,
 				&player->mutex_queue, &player->cond_queue);
@@ -1897,7 +2022,7 @@ int player_prepare_subtitles_queue(struct DecoderState *decoder_state,
 		struct State *state) {
 	struct Player *player = decoder_state->player;
 
-	player->subtitles_queue = queue_init_with_custom_lock(30,
+	player->subtitles_queue = queue_init_with_custom_lock(300,
 			(queue_fill_func) player_fill_subtitles_queue,
 			(queue_free_func) player_free_subtitles_queue, decoder_state, state,
 			&player->mutex_queue, &player->cond_queue);
@@ -2546,6 +2671,9 @@ void jni_player_seek(JNIEnv *env, jobject thiz, jlong positionUs) {
 				"Could not pause while not playing");
 		goto end;
 	}
+	
+	LOGI(3, "jni_player_seek :: %lis", positionUs);
+	
 	pthread_mutex_lock(&player->mutex_queue);
 	player->seek_position = positionUs;
 	pthread_cond_broadcast(&player->cond_queue);
@@ -2611,7 +2739,17 @@ void jni_player_resume(JNIEnv *env, jobject thiz) {
 	player->pause = FALSE;
 
 	int64_t resume_time = av_gettime();
-	player->start_time += resume_time - player->pause_time;
+	
+	//[[Jay
+	//player->start_time += resume_time - player->pause_time;
+    if (player->flag_time_offset_acquired == 1) {
+        player->start_time += resume_time - player->pause_time;
+    }
+    else {
+        player->start_time = resume_time;
+        player->pause_time = resume_time;
+    } 
+    //]]
 
 	pthread_cond_broadcast(&player->cond_queue);
 
